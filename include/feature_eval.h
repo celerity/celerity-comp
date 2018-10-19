@@ -1,14 +1,15 @@
 #pragma once
 
-#include <llvm/IR/Module.h>
-#include <llvm/IR/Instructions.h>
-#include <llvm/IR/BasicBlock.h>
 #include <llvm/Pass.h>
+#include <llvm/IR/Function.h>
+#include <llvm/IR/Module.h>
+#include <llvm/IR/BasicBlock.h>
 
+#include "feature_set.h"
 
 namespace celerity {
 
-/* List of supported feature extraction techniques */
+/* List of supported feature extraction techniques 
 enum class feature_eval_mode { 
 	RAW, 	      // Absolute values, not normalized. 
 	GREWE11,      // Follows Grewe et al. CC 2011 paper. No loop, only sum of BB values 
@@ -16,63 +17,50 @@ enum class feature_eval_mode {
 	FAN18,        // An extension of Grewe et al. with more features, designed to
 	COST_RELATION // Advanced representation where loop count are propagated in a cost relation feature form. It requires runtime feature evaluation, but is the most accurate.
 };
+*/
+
+/* List of supported feature extraction techniques */
+enum class feature_eval_mode { 
+    NORMAL,         // Instruction features of each BB are summed up for the program.
+    KOFLER13,       // Instruction features of instruction inside loops have a larger contribution.
+    COST_RELATION   // Insturction features are progated as cost relations . More accurate, but requires runtime evaluation.
+};
 
 
-/* Memory address space identifier, used for feature recognition. */
-const unsigned privateAddressSpace = 0;
-const unsigned localAddressSpace   = 1;
-const unsigned globalAddressSpace  = 2;
-
-/* An LLVM pass to extract features. */
+/* 
+ * An LLVM function pass to extract features. 
+ * The extraction of features from a single instruction is delegated to
+ * a feature set class.
+ * In this basic implementation, BB'instruction are summed up (ass in Grewe 2011).
+ */
 class feature_eval : public llvm::FunctionPass {
  public:
 	static char ID;
-	FeatureEval() : llvm::FunctionPass(ID) {}
+ //   feature_set &features;
+    feature_set *features;
+    fan18_feature_set default_feature_set;
 
-	virtual void evalInstruction(const llvm::Instruction &inst, FeatureSet &feat) = 0;
-	virtual void evalBB(const llvm::BasicBlock &bb, FeatureSet &feat) = 0;	
-	virtual void evalFunction(const llvm::Function &fun, FeatureSet &feat){
-	  for (const llvm::BasicBlock &bb : fun) 
-	    evalBB(bb, feat);
-	}
+    feature_eval() : llvm::FunctionPass(ID) {        
+        features = &default_feature_set;        
+    }
+	feature_eval(feature_set &fs) : llvm::FunctionPass(ID) {
+        features = &fs;
+    }
+    virtual ~feature_eval() {}
 
+	virtual void eval_BB(const llvm::BasicBlock &bb);	
+    virtual void eval_function(const llvm::Function &fun);
+
+    /* Overwrites LLVM FunctionPass method */
+	virtual bool runOnFunction(llvm::Function &fun);
+    void finalize();
 };
 
+/*  An LLVM function pass to extract features using [Kofler et al., 13] loop heuristics.  */
+//class kofler13_eval : public llvm::FunctionPass {};
 
-/* Utility function to check the address space of a buffer */
-bool checkAddrSpace(const unsigned addrSpaceId, FeatureSet &feat);
-
-
-/* Feature evaluation schema used by Fan et al. in XXX */
-class Fan18FeatureEval : public FeatureEval {
- public:
-	FeatureSet features;
-	
-	Fan18FeatureEval() : FeatureEval() {}
-	// override FeatureEval
-	void evalInstruction(const llvm::Instruction &inst, FeatureSet &feat);
-	void evalBB(const llvm::BasicBlock &bb, FeatureSet &feat);	
-	// overrides FunctionPass
-	bool runOnFunction(llvm::Function &F);
-
-	void finalize();
-
-	// List of LLVM instruction mapped into a specific feature
-	const set<string> BIN_OPS = {"add","fadd", "sub", "fsub", "mul", "fmul", "udiv", "sdiv", "fdiv", "urem", "srem", "frem"};//rem- remainder of a division by...
-	const set<string> BIN_OPS_INT_ADDSUB = {"add", "sub"};
-	const set<string> BIN_OPS_INT_MUL = {"mul"};
-	const set<string> BIN_OPS_INT_DIV = {"udiv","sdiv"};
-	const set<string> BIN_OPS_INT_REM = {"urem","srem"};
-	const set<string> BIN_OPS_FLOAT_ADDSUB = {"fadd", "fsub"};
-	const set<string> BIN_OPS_FLOAT_MUL = {"fmul"};
-	const set<string> BIN_OPS_FLOAT_DIV = {"fdiv"};
-	const set<string> BIN_OPS_FLOAT_REM = {"frem"};
-	const set<string> BIN_OPS_SPECIAL = {"call"};
-	const set<string> BITBIN_OPS = {"shl","lshr", "ashr", "and", "or", "xor"};
-	const set<string> VEC_OPS = {"extractelement","insertelement", "shufflevector"};
-	const set<string> AGG_OPS = {"extractvalue","insertvalue"};
-};
-
-
+/*  Feature etraction based on cost realation */
+// NOTE(Biagio) for Nadjib: your implementation should be included here
+// class costrelation_feature_eval : public feature_eval {};
 
 } // end namespace celerity
