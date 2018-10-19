@@ -40,7 +40,7 @@ private:
 };
 
 
-const string usage = "Usage:\n\t-h help\n\t-i <kernel bitcode file>\n\t-o <output file>\n\t-v verbose\n";
+const string usage = "Usage:\n\t-h help\n\t-i <kernel bitcode file>\n\t-o <output file>\n\t-fs <featureset={gpu|grewe|full}>\n\t-fe <featureeval={norm|grewe}>\n\t-v verbose\n";
 bool verbose = false;
 
 
@@ -81,25 +81,49 @@ int main(int argc, char* argv[]) {
       cerr << "ERROR loading the module from the bitcode" << endl << "Error message: " << err << endl; 
       exit(1);
     }
-*/
-    auto &module = (*bcModule)->getFunctionList();
-    celerity::fan18_feature_set features;;
-    celerity::feature_eval extractor(features);
-    // for each function in the module
-    for(Function &f : module){	
-//      if(verbose) { cout << "function " << f.getName() << endl;} XXX fixme
-        extractor.eval_function(f); 
+*/ 
+    
+    celerity::feature_set *fs;
+    const string &feat_set_opt = input.getCmdOption("-fs");
+    if (feat_set_opt.empty()){    
+        // supported flags: {gpu|grewe|full}
+        if(feat_set_opt =="grewe")
+            fs = new celerity::grewe11_feature_set();
+        else if(feat_set_opt =="full")
+            fs = new celerity::full_feature_set();
+        else // "gpu" is the default
+            fs = new celerity::gpu_feature_set();
     }
 
-    extractor.finalize(); // this includes normalization
+    celerity::feature_eval *fe;
+    const string &feat_eval_opt = input.getCmdOption("-fe");
+    if (feat_eval_opt.empty()){
+        // XXX to be supported flags: {normal|kofler|cr}
+        if(feat_set_opt == "kofler")
+            fe = new celerity::kofler13_eval(fs);
+        //else if(feat_set_opt =="cr")
+        //    fe = new celerity::costrelation_set(fs);
+        else // "normal" is the default
+            fe = new celerity::feature_eval(fs);
+    }
+
+    // for each function in the module
+    auto &module = (*bcModule)->getFunctionList();
+    for(Function &f : module){	
+        fe->eval_function(f); 
+    }
+    fe->finalize(); // this includes normalization
 
     const string &outFile = input.getCmdOption("-o");
     if (outFile.empty()){
-      features.print_to_cout();
+      fs->print_to_cout();
     }
     else {
-      features.print_to_file(outFile);
+      fs->print_to_file(outFile);
     }
+    
+    delete fe;
+    delete fs;
     return 0;
 } // end main
 

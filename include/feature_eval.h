@@ -22,7 +22,7 @@ enum class feature_eval_mode {
 /* List of supported feature extraction techniques */
 enum class feature_eval_mode { 
     NORMAL,         // Instruction features of each BB are summed up for the program.
-    KOFLER13,       // Instruction features of instruction inside loops have a larger contribution.
+    KOFLER13,       // Instruction features of instructions inside loops have a larger contribution.
     COST_RELATION   // Insturction features are progated as cost relations . More accurate, but requires runtime evaluation.
 };
 
@@ -35,16 +35,15 @@ enum class feature_eval_mode {
  */
 class feature_eval : public llvm::FunctionPass {
  public:
-	static char ID;
- //   feature_set &features;
+	static char ID; 
     feature_set *features;
-    fan18_feature_set default_feature_set;
+    gpu_feature_set default_feature_set;
 
     feature_eval() : llvm::FunctionPass(ID) {        
         features = &default_feature_set;        
     }
-	feature_eval(feature_set &fs) : llvm::FunctionPass(ID) {
-        features = &fs;
+	feature_eval(feature_set *fs) : llvm::FunctionPass(ID) {
+        features = fs;
     }
     virtual ~feature_eval() {}
 
@@ -57,10 +56,20 @@ class feature_eval : public llvm::FunctionPass {
 };
 
 /*  An LLVM function pass to extract features using [Kofler et al., 13] loop heuristics.  */
-//class kofler13_eval : public llvm::FunctionPass {};
+class kofler13_eval : public feature_eval {
+ public:
+    kofler13_eval() : feature_eval() {}
+	kofler13_eval(feature_set *fs) : feature_eval(fs) {}
+    virtual ~kofler13_eval() {}
+
+    virtual void eval_function(const llvm::Function &fun);
+};
 
 /*  Feature etraction based on cost realation */
-// NOTE(Biagio) for Nadjib: your implementation should be included here
-// class costrelation_feature_eval : public feature_eval {};
+// NOTE(Biagio) for Nadjib: your implementation should be included here.
+// class costrelation_eval : public feature_eval {
+//    virtual void eval_function(const llvm::Function &fun);
+//};
+//
 
 } // end namespace celerity

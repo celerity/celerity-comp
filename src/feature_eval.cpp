@@ -38,3 +38,9 @@ bool feature_eval::runOnFunction(llvm::Function &function) {
     return false; // no changes have been done to the Function
 }
 
+void kofler13_eval::eval_function(const llvm::Function &fun) {
+    // TODO fixme bug Nadjib
+    // Implementation is currenty using the standard one.
+    // Need to implement the loop heuristic.
+    feature_eval::eval_function(fun);
+}

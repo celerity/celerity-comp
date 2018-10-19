@@ -59,9 +59,9 @@ static inline bool instr_check(const set<string> &instr_set, const string &instr
     return instr_set.find(instr_name) != instr_set.end();
 }
 
-void fan18_feature_set::eval_instruction(const llvm::Instruction &inst){
+void gpu_feature_set::eval_instruction(const llvm::Instruction &inst){
     string i_name = inst.getOpcodeName();
-    if(BIN_OPS.find(i_name) != BIN_OPS.end()) {        
+    if(instr_check(BIN_OPS,i_name)) {        
         if(instr_check(INT_ADDSUB, i_name)){
             add("int_add_sub");
         }
@@ -118,6 +118,11 @@ void fan18_feature_set::eval_instruction(const llvm::Instruction &inst){
 void full_feature_set::eval_instruction(const llvm::Instruction &inst){    
     string i_name = inst.getOpcodeName();
     add(i_name);
+}
+
+void grewe11_feature_set::eval_instruction(const llvm::Instruction &inst){
+    // TODO FIXME XXX Nadjib
+    // implementation missing
 }
 
 AddressSpaceType celerity::checkAddrSpace(const unsigned addrSpaceId) {

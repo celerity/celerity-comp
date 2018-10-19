@@ -14,6 +14,10 @@ llvm_map_components_to_libnames(llvm_libs support core irreader)
 target_link_libraries(features ${llvm_libs})
 
 # Build the pass for opt
-#add_library(feature_eval MODULE feature_eval.cpp)
+add_library(feature_eval MODULE src/feature_eval.cpp)
 # add_llvm_loadable_module(FeatureEvaluationPass feature_eval.cpp)
 
+# move example scripts (make install)
+install(PROGRAMS "examples/features_from_OpenCL.sh" DESTINATION "${CMAKE_BINARY_DIR}" )
+install(PROGRAMS "examples/features_from_OpenCL_with_opt.sh" DESTINATION "${CMAKE_BINARY_DIR}" )
+install(PROGRAMS "examples/features_from_SYCL.sh" DESTINATION "${CMAKE_BINARY_DIR}" )

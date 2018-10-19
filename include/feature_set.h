@@ -13,9 +13,9 @@ namespace celerity {
 
 /* List of supported feature extraction techniques */
 enum class feature_set_mode { 	
-	GREWE11,    // Follows Grewe et al. CC 2011 paper. No loop, only sum of BB values 
+	GREWE11,    // Follows Grewe et al. CC 2011 paper. Few feautres mainly based on 
 	KOFLER13,   // Features based on the OpenCL langauge features (note: [Kofler et al.13] also had dynamic features).
-	FAN18,      // Features specifically designed for GPU architecture.
+	GPU,        // Features specifically designed for GPU architecture.
 	FULL        // Extended feature representation: one feature for each LLVM IR type. Accurate but hard to cover.
 };
 
@@ -31,10 +31,9 @@ class feature_set {
 		int old = raw[feature_name];
 		raw[feature_name] = old + 1;
         instructionNum++;
-	}
-	
+	}	
     
-    /* Abstract method that evaluate an llvm instruction in terms fo feature representation. */
+    /* Abstract method that evaluates an llvm instruction in terms of feature representation. */
     virtual void eval_instruction(const llvm::Instruction &inst) = 0;
 
     virtual float get_feature(string &feature_name){ return feat[feature_name]; }
@@ -45,11 +44,10 @@ class feature_set {
 };
 
 
-/* Feature set used by Fan, designed for GPU architecture. */
-class fan18_feature_set : public feature_set {
+/* Feature set based on Fan's work, specifically designed for GPU architecture. */
+class gpu_feature_set : public feature_set {
     void eval_instruction(const llvm::Instruction &inst);    
 };
-
 
 /* Feature set used by Grewe & O'Boyle. It is very generic and mainly designed to catch mem. vs comp. */
 class grewe11_feature_set : public feature_set {
@@ -60,7 +58,6 @@ class grewe11_feature_set : public feature_set {
 class full_feature_set : public feature_set {
     void eval_instruction(const llvm::Instruction &inst);    
 };
-
 
 
 /* Memory address space identifiers, used for feature recognition. */
