@@ -85,27 +85,31 @@ int main(int argc, char* argv[]) {
     
     celerity::feature_set *fs;
     const string &feat_set_opt = input.getCmdOption("-fs");
-    if (feat_set_opt.empty()){    
+    if (!feat_set_opt.empty()){    
         // supported flags: {gpu|grewe|full}
         if(feat_set_opt =="grewe")
             fs = new celerity::grewe11_feature_set();
         else if(feat_set_opt =="full")
             fs = new celerity::full_feature_set();
-        else // "gpu" is the default
+        else if(feat_set_opt =="gpu")
             fs = new celerity::gpu_feature_set();
     }
+    else // default, no command line flag
+        fs = new celerity::gpu_feature_set();
 
     celerity::feature_eval *fe;
     const string &feat_eval_opt = input.getCmdOption("-fe");
-    if (feat_eval_opt.empty()){
+    if (!feat_eval_opt.empty()){
         // XXX to be supported flags: {normal|kofler|cr}
-        if(feat_set_opt == "kofler")
+        if(feat_eval_opt == "kofler")
             fe = new celerity::kofler13_eval(fs);
-        //else if(feat_set_opt =="cr")
+        //else if(feat_eval_opt =="cr")
         //    fe = new celerity::costrelation_set(fs);
-        else // "normal" is the default
+        else if(feat_eval_opt == "normal")
             fe = new celerity::feature_eval(fs);
     }
+    else // default, no command line flag
+        fe = new celerity::feature_eval(fs);
 
     // for each function in the module
     auto &module = (*bcModule)->getFunctionList();

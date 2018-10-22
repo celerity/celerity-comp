@@ -75,7 +75,7 @@ void gpu_feature_set::eval_instruction(const llvm::Instruction &inst, int contri
             add("int_rem", contribution);
         }
         else if(instr_check(FLOAT_ADDSUB, i_name)){        
-            add("float_add_Sub", contribution);
+            add("float_add_sub", contribution);
         }
         else if(instr_check(FLOAT_MUL, i_name)){        
             add("float_mul", contribution);
@@ -117,7 +117,8 @@ void gpu_feature_set::eval_instruction(const llvm::Instruction &inst, int contri
 
 void full_feature_set::eval_instruction(const llvm::Instruction &inst, int contribution){    
     string i_name = inst.getOpcodeName();
-    add(i_name);
+    //cout << i_name << endl;
+    add(i_name, contribution);
 }
 
 void grewe11_feature_set::eval_instruction(const llvm::Instruction &inst, int contribution){
@@ -126,6 +127,21 @@ void grewe11_feature_set::eval_instruction(const llvm::Instruction &inst, int co
 }
 
 AddressSpaceType celerity::checkAddrSpace(const unsigned addrSpaceId) {
+    /*
+    From AMD's backend: 
+    https://llvm.org/docs/AMDGPUUsage.html#amdgpu-address-spaces
+    https://llvm.org/docs/AMDGPUUsage.html#address-space-mapping
+    we have the following address space definition:
+      Address Space - Memory Space
+                  1 - Private (Scratch)
+                  2 - Local (group/LDS)
+                  3 - Global
+                 nd - Constant
+                 nd - Generic (Flat)
+                 nd - Region (GDS)
+    Note that some bakends are currently implementing only part of them. 
+    We return Global (3) for the the other the currently unmapped address space (constant, generic, region).
+    */
     if(addrSpaceId == localAddressSpace) {
         return AddressSpaceType::Local;
     } else if(addrSpaceId == globalAddressSpace) {
@@ -133,8 +149,8 @@ AddressSpaceType celerity::checkAddrSpace(const unsigned addrSpaceId) {
     } else if(addrSpaceId == privateAddressSpace) {
         return AddressSpaceType::Private;
     } else {
-        std::cerr << "WARNING: unkwnown address space id: " << addrSpaceId << std::endl;
-        return AddressSpaceType::Unknown;
+        //std::cerr << "WARNING: unkwnown address space id: " << addrSpaceId << std::endl;
+        return AddressSpaceType::Global;
     }
 }
 

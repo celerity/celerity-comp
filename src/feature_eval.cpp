@@ -29,9 +29,6 @@ void feature_eval::eval_function(const llvm::Function &fun){
 }
 
 void feature_eval::finalize(){
-	//std::unordered_map<string,int> &raw = features->raw;
-	//features->instructionNum = raw.size();
-        //raw["binOps"] + raw["bitbinOps"] + raw["vecOps"] + raw["aggOps"] + raw["otherOps"] + raw["loadOps"] + raw["storeOps"];
 	normalize(*features);
 }
 
@@ -43,12 +40,15 @@ bool feature_eval::runOnFunction(llvm::Function &function) {
 }
 
 void kofler13_eval::eval_function(const llvm::Function &fun) {
+    cout << "kofler 1" << endl;
+
     // 1. for each BB, we initialize it's "loop multiplier" to 1
     std::unordered_map<const llvm::BasicBlock *, int> multiplier;
     for(const BasicBlock &bb : fun.getBasicBlockList()){
         multiplier[&bb] = 1;
     }	
 
+    cout << "kofler 2" << endl;
     // 2. for each BB in a loop, we multiply that "loop multiplier" times 100
     const int loop_contribution = 100;
     llvm::Function &fun2 = const_cast<llvm::Function &>(fun); // un-const hack
@@ -60,6 +60,7 @@ void kofler13_eval::eval_function(const llvm::Function &fun) {
         }
     }
 
+    cout << "kofler 3" << endl;
     /// 3. evaluation
     //feature_eval::eval_function(fun);
    	for (const llvm::BasicBlock &bb : fun) {
