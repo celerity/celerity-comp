@@ -25,7 +25,7 @@ public:
             this->tokens.push_back(string(argv[i]));
     }
 
-    const string& getCmdOption(const string &option) const{
+    string getCmdOption(const string &option) const {
         vector<string>::const_iterator itr;
         itr =  find(this->tokens.begin(), this->tokens.end(), option);
         if (itr != this->tokens.end() && ++itr != this->tokens.end()){
@@ -44,7 +44,7 @@ private:
 };
 
 
-const string usage = "Usage:\n\t-h help\n\t-i <kernel bitcode file>\n\t-o <output file>\n\t-fs <featureset={gpu|grewe|full}>\n\t-fe <featureeval={norm|grewe}>\n\t-v verbose\n";
+const string usage = "Usage:\n\t-h help\n\t-i <kernel bitcode file>\n\t-o <output file>\n\t-fs <featureset={gpu|grewe|full}>\n\t-fe <featureeval={norm|kofler|cr}>\n\t-v verbose\n";
 bool verbose = false;
 
 
@@ -68,8 +68,8 @@ int main(int argc, char* argv[]) {
     // Getting LLVM MemoryBuffer and Module
     ErrorOr<unique_ptr<MemoryBuffer>> fileBuffer = MemoryBuffer::getFile(fileName);     
     if (error_code ec = fileBuffer.getError()){
-      cerr << "ERROR loading the bitcode file: " << fileName << endl << "Error message: " << ec.message() << endl;
-      exit(1);
+        cerr << "ERROR loading the bitcode file: " << fileName << endl << "Error message: " << ec.message() << endl;
+        exit(1);
     }
     else {
 	if(verbose) cout << "Bitcode file loaded: " << fileName << endl;
@@ -87,20 +87,23 @@ int main(int argc, char* argv[]) {
 */ 
        
     celerity::feature_set *fs;
-    const string &feat_set_opt = input.getCmdOption("-fs");
+    string feat_set_opt = input.getCmdOption("-fs");
     if (!feat_set_opt.empty()){  // supported flags: {gpu|grewe|full}        
-        if(feat_set_opt =="grewe")
+        if(feat_set_opt =="grewe") 
             fs = new celerity::grewe11_feature_set();
         else if(feat_set_opt =="full")
             fs = new celerity::full_feature_set();
         else if(feat_set_opt =="gpu")
             fs = new celerity::gpu_feature_set();
     }
-    else // default, no command line flag
+    else {
+        // default, no command line flag
         fs = new celerity::gpu_feature_set();
+        feat_set_opt = "gpu";
+    }
 
     celerity::feature_eval *fe;
-    const string &feat_eval_opt = input.getCmdOption("-fe");
+    string feat_eval_opt = input.getCmdOption("-fe");
     if (!feat_eval_opt.empty()){ // XXX to be supported flags: {normal|kofler|cr}
         if(feat_eval_opt == "kofler")
             fe = new celerity::kofler13_eval(fs);
@@ -109,8 +112,13 @@ int main(int argc, char* argv[]) {
         else if(feat_eval_opt == "normal")
             fe = new celerity::feature_eval(fs);
     }
-    else // default, no command line flag
+    else {
+        // default, no command line flag
         fe = new celerity::feature_eval(fs);
+        feat_eval_opt = "normal";
+    }
+
+    cout << "feature-set: " << feat_set_opt << ", feature-evaluation-technique: " << feat_eval_opt << endl;
 
     // We build a pass manager that load our pass and dependent passes 
     // (e.g., LoopInfoWrapperPass si required by kofler13_eval)    

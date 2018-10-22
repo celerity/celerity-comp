@@ -15,6 +15,8 @@ done
 for bc in *.bc; do
     echo "extracing features from $bc"
     ../features -i $bc 
+    ../features -i $bc -fe kofler
+    ../features -i $bc -fs full
 done
 
 cd ..

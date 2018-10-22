@@ -11,15 +11,16 @@ set(FEATURE_SRC src/feature_eval.cpp src/feature_set.cpp)
 # Build the feature extraction tool 
 add_executable(features ${FEATURE_SRC} src/feature_tool.cpp)
 llvm_map_components_to_libnames(llvm_libs support core irreader analysis)
+SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS}  -fPIC -fvisibility-inlines-hidden -fno-exceptions -fno-rtti -std=c++11 ")
+
 target_link_libraries(features ${llvm_libs})
 
 # Build the pass for opt
-add_library(feature_eval MODULE src/feature_eval.cpp)
-# add_llvm_loadable_module(FeatureEvaluationPass feature_eval.cpp)
+add_library(feature_eval ${FEATURE_SRC} src/feature_eval.cpp)
+#add_llvm_loadable_module(FeatureEvaluationPass feature_eval.cpp)
 
 # move example scripts and examples (make install)
 install(PROGRAMS "examples/features_from_OpenCL.sh" DESTINATION "${CMAKE_BINARY_DIR}" )
-install(PROGRAMS "examples/features_from_OpenCL_with_opt.sh" DESTINATION "${CMAKE_BINARY_DIR}" )
 install(PROGRAMS "examples/features_from_SYCL.sh" DESTINATION "${CMAKE_BINARY_DIR}" )
 install(FILES "examples/example-application-sycl.cpp"  DESTINATION "${CMAKE_BINARY_DIR}/samples" )
 install(FILES "examples/matrix-multiply-sycl.cpp"  DESTINATION "${CMAKE_BINARY_DIR}/samples" )

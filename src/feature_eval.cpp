@@ -83,8 +83,8 @@ void kofler13_eval::eval_function(const llvm::Function &fun) {
 // Pass registration.
 
 // Old-style pass registration for <opt> (registering dynamically loaded passes).
-static RegisterPass<feature_eval> feature_eval_pass("feature_eval", "Feature evaluation");
-static RegisterPass<kofler13_eval> kofler13_eval_pass("kofler13_eval", "Kofler13 feature evaluation");
+static RegisterPass<feature_eval> feature_eval_pass("feature-eval", "Feature evaluation");
+static RegisterPass<kofler13_eval> kofler13_eval_pass("kofler13-eval", "Kofler13 feature evaluation");
 //static RegisterPass<costrelation_eval> cr_eval_pass("costrelation_eval", "Cost relation feature evaluation");
 
 // Pass registration with declared dependencies.
