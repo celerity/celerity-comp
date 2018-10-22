@@ -5,6 +5,9 @@
 #include <llvm/IR/Module.h>
 #include <llvm/IR/BasicBlock.h>
 
+#include <llvm/PassSupport.h>
+#include <llvm/PassRegistry.h>
+
 #include "feature_set.h"
 
 namespace celerity {
@@ -52,18 +55,22 @@ class feature_eval : public llvm::FunctionPass {
 
     /* Overwrites LLVM FunctionPass method */
 	virtual bool runOnFunction(llvm::Function &fun);
+    virtual void getAnalysisUsage(llvm::AnalysisUsage &info) const {}    
     void finalize();
 };
 
 /*  An LLVM function pass to extract features using [Kofler et al., 13] loop heuristics.  */
 class kofler13_eval : public feature_eval {
  public:
-    kofler13_eval() : feature_eval() {}
+    kofler13_eval() : feature_eval() { }
 	kofler13_eval(feature_set *fs) : feature_eval(fs) {}
     virtual ~kofler13_eval() {}
 
+    virtual void getAnalysisUsage(llvm::AnalysisUsage &info) const;
     virtual void eval_function(const llvm::Function &fun);
 };
+
+
 
 /*  Feature etraction based on cost realation */
 // NOTE(Biagio) for Nadjib: your implementation should be included here.

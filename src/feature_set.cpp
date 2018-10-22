@@ -1,5 +1,6 @@
 #include <fstream>
 
+
 #include <llvm/Support/MemoryBuffer.h>
 
 #include "feature_set.h"
@@ -16,9 +17,12 @@ void feature_set::print(ostream &os){
 		feat_names.push_back(el.first);	
 	std::sort(feat_names.begin(),feat_names.end());
         // print in alphabetical order
-	cout << "name, raw, feat" << endl;
-	for(string name : feat_names){
-	  os << name << "," << raw[name] <<","<< feat[name] << endl;	
+	cout << "name           raw       feat" << endl;
+	for(string &name : feat_names){    
+      string p_name = name;                         p_name.resize(15,' ');
+      string p_raw  = std::to_string(raw[name]);    p_raw.resize(10,' ');
+      string p_feat = std::to_string(feat[name]);   p_feat.resize(10,' ');
+	  os << p_name << p_raw << p_feat << endl;	
 	}
 	cout << endl;
 }
@@ -63,7 +67,7 @@ void gpu_feature_set::eval_instruction(const llvm::Instruction &inst, int contri
     string i_name = inst.getOpcodeName();
     if(instr_check(BIN_OPS,i_name)) {        
         if(instr_check(INT_ADDSUB, i_name)){
-            add("int_add_sub", contribution);
+            add("int_addsub", contribution);
         }
         else if(instr_check(INT_MUL, i_name)){        
             add("int_mul", contribution);
@@ -75,19 +79,19 @@ void gpu_feature_set::eval_instruction(const llvm::Instruction &inst, int contri
             add("int_rem", contribution);
         }
         else if(instr_check(FLOAT_ADDSUB, i_name)){        
-            add("float_add_sub", contribution);
+            add("flt_addsub", contribution);
         }
         else if(instr_check(FLOAT_MUL, i_name)){        
-            add("float_mul", contribution);
+            add("flt_mul", contribution);
         }
         else if(instr_check(FLOAT_DIV, i_name)){        
-            add("float_div", contribution);
+            add("flt_div", contribution);
         }
         else if(instr_check(FLOAT_REM, i_name)){        
-            add("float_rem", contribution);
+            add("flt_rem", contribution);
         }
         else if(instr_check(SPECIAL, i_name)){        
-            add("float_rem", contribution);
+            add("flt_rem", contribution);
         }
     }
     else if(instr_check(BITWISE, i_name)){    

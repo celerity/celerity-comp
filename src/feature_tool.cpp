@@ -6,6 +6,10 @@
 #include <llvm/Bitcode/BitcodeReader.h>
 #include <llvm/IR/LLVMContext.h>
 
+#include <llvm/IR/LegacyPassManager.h>
+#include <llvm/Analysis/LoopInfo.h> // InfoWrapperPass
+
+
 #include "feature_set.h"
 #include "feature_eval.h"
 
@@ -48,7 +52,6 @@ bool verbose = false;
 int main(int argc, char* argv[]) {
 
     ArgumentParser input(argc, argv);
-
     if(input.cmdOptionExists("-h")) {
         cout << usage;
         exit(0);
@@ -82,11 +85,10 @@ int main(int argc, char* argv[]) {
       exit(1);
     }
 */ 
-    
+       
     celerity::feature_set *fs;
     const string &feat_set_opt = input.getCmdOption("-fs");
-    if (!feat_set_opt.empty()){    
-        // supported flags: {gpu|grewe|full}
+    if (!feat_set_opt.empty()){  // supported flags: {gpu|grewe|full}        
         if(feat_set_opt =="grewe")
             fs = new celerity::grewe11_feature_set();
         else if(feat_set_opt =="full")
@@ -99,8 +101,7 @@ int main(int argc, char* argv[]) {
 
     celerity::feature_eval *fe;
     const string &feat_eval_opt = input.getCmdOption("-fe");
-    if (!feat_eval_opt.empty()){
-        // XXX to be supported flags: {normal|kofler|cr}
+    if (!feat_eval_opt.empty()){ // XXX to be supported flags: {normal|kofler|cr}
         if(feat_eval_opt == "kofler")
             fe = new celerity::kofler13_eval(fs);
         //else if(feat_eval_opt =="cr")
@@ -111,22 +112,30 @@ int main(int argc, char* argv[]) {
     else // default, no command line flag
         fe = new celerity::feature_eval(fs);
 
-    // for each function in the module
-    auto &module = (*bcModule)->getFunctionList();
-    for(Function &f : module){	
-        fe->eval_function(f); 
-    }
-    fe->finalize(); // this includes normalization
+    // We build a pass manager that load our pass and dependent passes 
+    // (e.g., LoopInfoWrapperPass si required by kofler13_eval)    
+    legacy::PassManager manager;    
+    llvm::Pass *loop_analysis = new llvm::LoopInfoWrapperPass();
+    manager.add(loop_analysis);
+    manager.add(fe);
+    Module &module = *(*bcModule);
+    manager.run(module);
 
+    // feature normalization 
+    fe->finalize();     
+
+    // final printing to either cout or file
     const string &outFile = input.getCmdOption("-o");
     if (outFile.empty()){
       fs->print_to_cout();
     }
     else {
       fs->print_to_file(outFile);
-    }
-    
-    delete fe;
+    }    
+
+    //the pass manager does these two deallocations
+    //delete fe; 
+    //delete loop_analysis;
     delete fs;
     return 0;
 } // end main

@@ -4,6 +4,7 @@
 
 #include <llvm/Analysis/LoopInfo.h>
 
+
 #include "feature_eval.h"
 #include "feature_norm.h"
 
@@ -11,8 +12,6 @@ using namespace celerity;
 using namespace llvm;
 using namespace std;
 
-// The following defines the name of the pass, used by <opt> to run this pass on a IR file (registering dynamically loaded passes).
-static RegisterPass<feature_eval> feature_eval_pass("feature_eval", "Feature evaluation");
 
 // Initialization of a static member
 char feature_eval::ID = 0;
@@ -35,40 +34,60 @@ void feature_eval::finalize(){
 bool feature_eval::runOnFunction(llvm::Function &function) {
 	eval_function(function);
 	finalize();	
-	features->print(cerr); // LLVM doesn't like cout :)
+	//features->print(cerr); // LLVM doesn't like cout :)
     return false; // no changes have been done to the Function
 }
 
+
+void kofler13_eval::getAnalysisUsage(AnalysisUsage &AU) const {    
+    AU.setPreservesAll();
+    AU.addRequired<LoopInfoWrapperPass>();
+}
+
 void kofler13_eval::eval_function(const llvm::Function &fun) {
-    cout << "kofler 1" << endl;
+    // Current implementation requires that the LoopInfoWrapperPass pass calculates the loop information, 
+    // thus it should be ran before ofthis pass.
 
     // 1. for each BB, we initialize it's "loop multiplier" to 1
     std::unordered_map<const llvm::BasicBlock *, int> multiplier;
     for(const BasicBlock &bb : fun.getBasicBlockList()){
         multiplier[&bb] = 1;
     }	
-
-    cout << "kofler 2" << endl;
+    
     // 2. for each BB in a loop, we multiply that "loop multiplier" times 100
     const int loop_contribution = 100;
     llvm::Function &fun2 = const_cast<llvm::Function &>(fun); // un-const hack
     //const LoopInfo &LI = getAnalysis<LoopInfo>(fun2);  
     const LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>(fun2).getLoopInfo();  
     for(const Loop *loop : LI){
+        cout << "loop!" << endl;
         for(const BasicBlock *bb : loop->getBlocks()) {
+            cout << "BB in loop!" << endl;            
             multiplier[bb] = multiplier[bb] * loop_contribution;
         }
     }
-
-    cout << "kofler 3" << endl;
+    
     /// 3. evaluation
     //feature_eval::eval_function(fun);
    	for (const llvm::BasicBlock &bb : fun) {
         int mult = multiplier[&bb];
-        cout << "BB mult: " << mult;
+        cout << "BB mult: " << mult << endl;
        	for(const Instruction &i : bb){
 		    features->eval_instruction(i, mult);            
 	    }        
     }
 
 }
+
+
+// Pass registration.
+
+// Old-style pass registration for <opt> (registering dynamically loaded passes).
+static RegisterPass<feature_eval> feature_eval_pass("feature_eval", "Feature evaluation");
+static RegisterPass<kofler13_eval> kofler13_eval_pass("kofler13_eval", "Kofler13 feature evaluation");
+//static RegisterPass<costrelation_eval> cr_eval_pass("costrelation_eval", "Cost relation feature evaluation");
+
+// Pass registration with declared dependencies.
+//INITIALIZE_PASS_BEGIN(kofler13_eval, "kofler13_eval", "Kofler's feature evaluation", false, false)
+//INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+//INITIALIZE_PASS_END(kofler13_eval, "kofler13_eval", "Kofler's feature evaluation", false, false)
