@@ -27,14 +27,14 @@ class feature_set {
 	std::unordered_map<string,float> feat;    // feature after normalization
 	int instructionNum	= 0;
 	
-	void add(const string &feature_name){
+	void add(const string &feature_name, int contribution = 1){
 		int old = raw[feature_name];
-		raw[feature_name] = old + 1;
+		raw[feature_name] = old + contribution;
         instructionNum++;
 	}	
     
     /* Abstract method that evaluates an llvm instruction in terms of feature representation. */
-    virtual void eval_instruction(const llvm::Instruction &inst) = 0;
+    virtual void eval_instruction(const llvm::Instruction &inst, int contribution = 1) = 0;        
 
     virtual float get_feature(string &feature_name){ return feat[feature_name]; }
 	virtual void print(std::ostream&);
@@ -46,17 +46,17 @@ class feature_set {
 
 /* Feature set based on Fan's work, specifically designed for GPU architecture. */
 class gpu_feature_set : public feature_set {
-    void eval_instruction(const llvm::Instruction &inst);    
+    void eval_instruction(const llvm::Instruction &inst, int contribution = 1);    
 };
 
 /* Feature set used by Grewe & O'Boyle. It is very generic and mainly designed to catch mem. vs comp. */
 class grewe11_feature_set : public feature_set {
-    void eval_instruction(const llvm::Instruction &inst);
+    void eval_instruction(const llvm::Instruction &inst, int contribution = 1);
 }; 
 
 /* Feature set used by Fan, designed for GPU architecture. */
 class full_feature_set : public feature_set {
-    void eval_instruction(const llvm::Instruction &inst);    
+    void eval_instruction(const llvm::Instruction &inst, int contribution = 1);    
 };
 
 

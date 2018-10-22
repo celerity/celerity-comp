@@ -23,7 +23,7 @@ enum class feature_eval_mode {
 enum class feature_eval_mode { 
     NORMAL,         // Instruction features of each BB are summed up for the program.
     KOFLER13,       // Instruction features of instructions inside loops have a larger contribution.
-    COST_RELATION   // Insturction features are progated as cost relations . More accurate, but requires runtime evaluation.
+    COST_RELATION   // Instruction features are progated as cost relations . More accurate, but requires runtime evaluation.
 };
 
 

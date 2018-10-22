@@ -10,7 +10,7 @@ set(FEATURE_SRC src/feature_eval.cpp src/feature_set.cpp)
 
 # Build the feature extraction tool 
 add_executable(features ${FEATURE_SRC} src/feature_tool.cpp)
-llvm_map_components_to_libnames(llvm_libs support core irreader)
+llvm_map_components_to_libnames(llvm_libs support core irreader analysis)
 target_link_libraries(features ${llvm_libs})
 
 # Build the pass for opt

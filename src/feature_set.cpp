@@ -59,68 +59,68 @@ static inline bool instr_check(const set<string> &instr_set, const string &instr
     return instr_set.find(instr_name) != instr_set.end();
 }
 
-void gpu_feature_set::eval_instruction(const llvm::Instruction &inst){
+void gpu_feature_set::eval_instruction(const llvm::Instruction &inst, int contribution){
     string i_name = inst.getOpcodeName();
     if(instr_check(BIN_OPS,i_name)) {        
         if(instr_check(INT_ADDSUB, i_name)){
-            add("int_add_sub");
+            add("int_add_sub", contribution);
         }
         else if(instr_check(INT_MUL, i_name)){        
-            add("int_mul");
+            add("int_mul", contribution);
         }
         else if(instr_check(INT_DIV, i_name)){        
-            add("int_div");
+            add("int_div", contribution);
         }
         else if(instr_check(INT_REM, i_name)){        
-            add("int_rem");
+            add("int_rem", contribution);
         }
         else if(instr_check(FLOAT_ADDSUB, i_name)){        
-            add("float_add_Sub");
+            add("float_add_Sub", contribution);
         }
         else if(instr_check(FLOAT_MUL, i_name)){        
-            add("float_mul");
+            add("float_mul", contribution);
         }
         else if(instr_check(FLOAT_DIV, i_name)){        
-            add("float_div");
+            add("float_div", contribution);
         }
         else if(instr_check(FLOAT_REM, i_name)){        
-            add("float_rem");
+            add("float_rem", contribution);
         }
         else if(instr_check(SPECIAL, i_name)){        
-            add("float_rem");
+            add("float_rem", contribution);
         }
     }
     else if(instr_check(BITWISE, i_name)){    
-        add("bitwise");
+        add("bitwise", contribution);
     }
     else if(instr_check(AGGREGATE, i_name)){    
-        add("aggregate");
+        add("aggregate", contribution);
     }
     else if(instr_check(VECTOR, i_name)){    
-        add("vector");    
+        add("vector", contribution);    
     }     
     else if(const LoadInst *li = dyn_cast<LoadInst>(&inst)) {
-        add("load");
+        add("load", contribution);
         checkAddrSpace(li->getPointerAddressSpace()); 
         // TODO: distinguish local from global memory
         // add("load_local"), add("load_global")
     }
     else if (const StoreInst *si = dyn_cast<StoreInst>(&inst)) {
-        add("store");
+        add("store", contribution);
         checkAddrSpace(si->getPointerAddressSpace()); 
         // TODO: distinguish local from global memory
         // add("load_local"), add("load_global")
     } else {
-        add("other");
+        add("other", contribution);
     }    
 }
 
-void full_feature_set::eval_instruction(const llvm::Instruction &inst){    
+void full_feature_set::eval_instruction(const llvm::Instruction &inst, int contribution){    
     string i_name = inst.getOpcodeName();
     add(i_name);
 }
 
-void grewe11_feature_set::eval_instruction(const llvm::Instruction &inst){
+void grewe11_feature_set::eval_instruction(const llvm::Instruction &inst, int contribution){
     // TODO FIXME XXX Nadjib
     // implementation missing
 }

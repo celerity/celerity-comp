@@ -1,5 +1,9 @@
 //#include <llvm/RegisterPass.h>
 
+#include <unordered_map>
+
+#include <llvm/Analysis/LoopInfo.h>
+
 #include "feature_eval.h"
 #include "feature_norm.h"
 
@@ -39,8 +43,31 @@ bool feature_eval::runOnFunction(llvm::Function &function) {
 }
 
 void kofler13_eval::eval_function(const llvm::Function &fun) {
-    // TODO fixme bug Nadjib
-    // Implementation is currenty using the standard one.
-    // Need to implement the loop heuristic.
-    feature_eval::eval_function(fun);
+    // 1. for each BB, we initialize it's "loop multiplier" to 1
+    std::unordered_map<const llvm::BasicBlock *, int> multiplier;
+    for(const BasicBlock &bb : fun.getBasicBlockList()){
+        multiplier[&bb] = 1;
+    }	
+
+    // 2. for each BB in a loop, we multiply that "loop multiplier" times 100
+    const int loop_contribution = 100;
+    llvm::Function &fun2 = const_cast<llvm::Function &>(fun); // un-const hack
+    //const LoopInfo &LI = getAnalysis<LoopInfo>(fun2);  
+    const LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>(fun2).getLoopInfo();  
+    for(const Loop *loop : LI){
+        for(const BasicBlock *bb : loop->getBlocks()) {
+            multiplier[bb] = multiplier[bb] * loop_contribution;
+        }
+    }
+
+    /// 3. evaluation
+    //feature_eval::eval_function(fun);
+   	for (const llvm::BasicBlock &bb : fun) {
+        int mult = multiplier[&bb];
+        cout << "BB mult: " << mult;
+       	for(const Instruction &i : bb){
+		    features->eval_instruction(i, mult);            
+	    }        
+    }
+
 }
