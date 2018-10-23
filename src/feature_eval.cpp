@@ -1,5 +1,3 @@
-//#include <llvm/RegisterPass.h>
-
 #include <unordered_map>
 
 #include <llvm/Analysis/LoopInfo.h>
@@ -33,9 +31,9 @@ void feature_eval::finalize(){
 
 bool feature_eval::runOnFunction(llvm::Function &function) {
 	eval_function(function);
-	finalize();	
-	//features->print(cerr); // LLVM doesn't like cout :)
-    return false; // no changes have been done to the Function
+	finalize();	        // normalization here
+	features->print();  // print the features on cerr (LLVM doesn't like cout)
+    return false;       // no changes have been done to the Function
 }
 
 
@@ -47,22 +45,20 @@ void kofler13_eval::getAnalysisUsage(AnalysisUsage &AU) const {
 void kofler13_eval::eval_function(const llvm::Function &fun) {
     // Current implementation requires that the LoopInfoWrapperPass pass calculates the loop information, 
     // thus it should be ran before ofthis pass.
-
+    
     // 1. for each BB, we initialize it's "loop multiplier" to 1
     std::unordered_map<const llvm::BasicBlock *, int> multiplier;
     for(const BasicBlock &bb : fun.getBasicBlockList()){
         multiplier[&bb] = 1;
     }	
-    
+
     // 2. for each BB in a loop, we multiply that "loop multiplier" times 100
     const int loop_contribution = 100;
-    llvm::Function &fun2 = const_cast<llvm::Function &>(fun); // un-const hack
-    //const LoopInfo &LI = getAnalysis<LoopInfo>(fun2);  
-    const LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>(fun2).getLoopInfo();  
-    for(const Loop *loop : LI){
-        cout << "loop!" << endl;
-        for(const BasicBlock *bb : loop->getBlocks()) {
-            cout << "BB in loop!" << endl;            
+    LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();        
+    for(const Loop *loop : LI) {        
+        // cerr << "loop found" << endl;         
+        for(const BasicBlock *bb : loop->getBlocks()) {               
+            // cerr << "BB in loop!" << endl;         
             multiplier[bb] = multiplier[bb] * loop_contribution;
         }
     }
@@ -71,7 +67,7 @@ void kofler13_eval::eval_function(const llvm::Function &fun) {
     //feature_eval::eval_function(fun);
    	for (const llvm::BasicBlock &bb : fun) {
         int mult = multiplier[&bb];
-        cout << "BB mult: " << mult << endl;
+        /// cerr << "BB mult: " << mult << endl;
        	for(const Instruction &i : bb){
 		    features->eval_instruction(i, mult);            
 	    }        

@@ -25,22 +25,25 @@ class feature_set {
  public:
 	std::unordered_map<string,int> raw;       // raw features (instruction count)
 	std::unordered_map<string,float> feat;    // feature after normalization
-	int instructionNum	= 0;
-	
+	int instructionNum	= 0;	
+    int instructionTotContrib = 0;
+
 	void add(const string &feature_name, int contribution = 1){
 		int old = raw[feature_name];
 		raw[feature_name] = old + contribution;
         instructionNum++;
+        instructionTotContrib += contribution;
 	}	
     
     /* Abstract method that evaluates an llvm instruction in terms of feature representation. */
     virtual void eval_instruction(const llvm::Instruction &inst, int contribution = 1) = 0;        
 
     virtual float get_feature(string &feature_name){ return feat[feature_name]; }
-	virtual void print(std::ostream&);
+	virtual void print(std::ostream& = std::cerr);
 	virtual void print_to_cout();
 	virtual void print_to_file(const string&);
     virtual void normalize();
+    virtual ~feature_set(){}
 };
 
 

@@ -9,7 +9,6 @@
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/Analysis/LoopInfo.h> // InfoWrapperPass
 
-
 #include "feature_set.h"
 #include "feature_eval.h"
 
@@ -85,7 +84,8 @@ int main(int argc, char* argv[]) {
       exit(1);
     }
 */ 
-       
+
+    // define a feature set   
     celerity::feature_set *fs;
     string feat_set_opt = input.getCmdOption("-fs");
     if (!feat_set_opt.empty()){  // supported flags: {gpu|grewe|full}        
@@ -102,6 +102,7 @@ int main(int argc, char* argv[]) {
         feat_set_opt = "gpu";
     }
 
+    // define a feature evaluation technique
     celerity::feature_eval *fe;
     string feat_eval_opt = input.getCmdOption("-fe");
     if (!feat_eval_opt.empty()){ // XXX to be supported flags: {normal|kofler|cr}
@@ -127,23 +128,20 @@ int main(int argc, char* argv[]) {
     manager.add(loop_analysis);
     manager.add(fe);
     Module &module = *(*bcModule);
-    manager.run(module);
-
-    // feature normalization 
-    fe->finalize();     
+    manager.run(module); // note: this also prints the features in cerr
 
     // final printing to either cout or file
     const string &outFile = input.getCmdOption("-o");
     if (outFile.empty()){
-      fs->print_to_cout();
+      // do nothing
+      // fs->print_to_cout(); 
     }
     else {
       fs->print_to_file(outFile);
     }    
 
-    //the pass manager does these two deallocations
-    //delete fe; 
-    //delete loop_analysis;
+    //the pass manager does these two deallocations:
+    //delete fe; delete loop_analysis;
     delete fs;
     return 0;
 } // end main

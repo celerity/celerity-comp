@@ -12,16 +12,6 @@
 
 namespace celerity {
 
-/* List of supported feature extraction techniques 
-enum class feature_eval_mode { 
-	RAW, 	      // Absolute values, not normalized. 
-	GREWE11,      // Follows Grewe et al. CC 2011 paper. No loop, only sum of BB values 
-	KOFLER13,     // Follows Kofler et al. ICS 2013 paper. Loop use the "unroll100" heuristic 
-	FAN18,        // An extension of Grewe et al. with more features, designed to
-	COST_RELATION // Advanced representation where loop count are propagated in a cost relation feature form. It requires runtime feature evaluation, but is the most accurate.
-};
-*/
-
 /* List of supported feature extraction techniques */
 enum class feature_eval_mode { 
     NORMAL,         // Instruction features of each BB are summed up for the program.
@@ -32,9 +22,8 @@ enum class feature_eval_mode {
 
 /* 
  * An LLVM function pass to extract features. 
- * The extraction of features from a single instruction is delegated to
- * a feature set class.
- * In this basic implementation, BB'instruction are summed up (ass in Grewe 2011).
+ * The extraction of features from a single instruction is delegated to a feature set class.
+ * In this basic implementation, BB's instruction contributions are summed up.
  */
 class feature_eval : public llvm::FunctionPass {
  public:
@@ -59,17 +48,20 @@ class feature_eval : public llvm::FunctionPass {
     void finalize();
 };
 
-/*  An LLVM function pass to extract features using [Kofler et al., 13] loop heuristics.  */
+/*  
+ * An LLVM function pass to extract features using [Kofler et al., 13] loop heuristics.
+ * The heuristic gives more important (x100) to the features inside a loop.
+ * It requires the loop analysis pass ("loops") to be executed before of that pass.
+ */
 class kofler13_eval : public feature_eval {
  public:
-    kofler13_eval() : feature_eval() { }
+    kofler13_eval() : feature_eval() {}
 	kofler13_eval(feature_set *fs) : feature_eval(fs) {}
     virtual ~kofler13_eval() {}
 
     virtual void getAnalysisUsage(llvm::AnalysisUsage &info) const;
     virtual void eval_function(const llvm::Function &fun);
 };
-
 
 
 /*  Feature etraction based on cost realation */
