@@ -41,10 +41,14 @@ void kofler13_eval::getAnalysisUsage(AnalysisUsage &AU) const {
     AU.setPreservesAll();
     AU.addRequired<LoopInfoWrapperPass>();
 }
-
+/*
+ * Current limitations:
+ *  - it only works on natual loops (nested loops may be missing)
+ *  - it does not implement yet the static loop bound check (multiplier = static loop bound)
+ */
 void kofler13_eval::eval_function(const llvm::Function &fun) {
     // Current implementation requires that the LoopInfoWrapperPass pass calculates the loop information, 
-    // thus it should be ran before ofthis pass.
+    // thus it should be ran before ofthis pass.    
     
     // 1. for each BB, we initialize it's "loop multiplier" to 1
     std::unordered_map<const llvm::BasicBlock *, int> multiplier;
