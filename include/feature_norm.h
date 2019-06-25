@@ -4,7 +4,7 @@
 namespace celerity {
 
 /* Feature normalization approches */
-enum class feature_norm { 
+enum class feature_norm {
 	NONE,
 	SUM,
 	MINMAX_LINEAR,
