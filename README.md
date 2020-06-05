@@ -1,6 +1,6 @@
-# CELERITY Compilation
+# CELERITY Compilation and Modeling
 
-The CELERITY static analysis and modeling implementation.
+This project contains Celerity's support for static analysis and modeling. In particular, you can run an LLVM pass on a Celerity kernel and use its analysis information to implement a performance model to be later inferred at runtime. 
 
 ## Dependencies
 
@@ -10,7 +10,7 @@ The CELERITY static analysis and modeling implementation.
 
 ### Optional
 
-The feature extraction tools works on the LLVM intermediate representation, which can be obtained in different ways.
+The feature extraction tools also work as a standalone tool (no need of Celerity), which operates on the LLVM intermediate representation.
 These dependencies are only required for testing it on SYCL codes or OpenCL kernels.
 
 * An [OpenCL](https://www.khronos.org/opencl) driver (tested with OpenCL version 2.0)
