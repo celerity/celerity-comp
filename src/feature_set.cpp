@@ -11,24 +11,31 @@ using namespace llvm;
 using namespace std;
 
 void feature_set::print(ostream &os){
-	vector<string> feat_names;
-	feat_names.reserve(feat.size());
-	for(std::pair<string,float> el : feat)	
-		feat_names.push_back(el.first);	
-	std::sort(feat_names.begin(),feat_names.end());
+    for (const auto& kv : raw) {
+        Function *func = kv.first;
+        os << "Features for function: " << func->getName().str() << endl;
+        vector<string> feat_names;
+        feat_names.reserve(feat[func].size());
+        for(std::pair<string,float> el : feat[func])	
+            feat_names.push_back(el.first);	
+        std::sort(feat_names.begin(),feat_names.end());
         // print in alphabetical order
-	cout << "name           raw       feat" << endl;
-	for(string &name : feat_names){    
-      string p_name = name;                         p_name.resize(15,' ');
-      string p_raw  = std::to_string(raw[name]);    p_raw.resize(10,' ');
-      string p_feat = std::to_string(feat[name]);   p_feat.resize(10,' ');
-	  os << p_name << p_raw << p_feat << endl;	
-	}
-	cout << endl;
+        os << "name           raw       feat" << endl;
+        for(string &name : feat_names){    
+            string p_name = name;
+            string p_raw  = std::to_string(raw[func][name]);
+            string p_feat = std::to_string(feat[func][name]);
+            p_name.resize(15,' ');
+            p_raw.resize(10,' ');
+            p_feat.resize(10,' ');
+            os << p_name << p_raw << p_feat << endl;	
+        }
+        os << endl;
+    }
 }
 
 void feature_set::print_to_cout(){
-	feature_set::print(cout);
+    feature_set::print(cout);
 }
 
 void feature_set::print_to_file(const string &out_file){
@@ -63,71 +70,69 @@ static inline bool instr_check(const set<string> &instr_set, const string &instr
     return instr_set.find(instr_name) != instr_set.end();
 }
 
-void gpu_feature_set::eval_instruction(const llvm::Instruction &inst, int contribution){
+string gpu_feature_set::eval_instruction(const llvm::Instruction &inst, int contribution){
     string i_name = inst.getOpcodeName();
     if(instr_check(BIN_OPS,i_name)) {        
         if(instr_check(INT_ADDSUB, i_name)){
-            add("int_addsub", contribution);
+            return "int_addsub";
         }
         else if(instr_check(INT_MUL, i_name)){        
-            add("int_mul", contribution);
+            return "int_mul";
         }
         else if(instr_check(INT_DIV, i_name)){        
-            add("int_div", contribution);
+            return "int_div";
         }
         else if(instr_check(INT_REM, i_name)){        
-            add("int_rem", contribution);
+            return "int_rem";
         }
         else if(instr_check(FLOAT_ADDSUB, i_name)){        
-            add("flt_addsub", contribution);
+            return "flt_addsub";
         }
         else if(instr_check(FLOAT_MUL, i_name)){        
-            add("flt_mul", contribution);
+            return "flt_mul";
         }
         else if(instr_check(FLOAT_DIV, i_name)){        
-            add("flt_div", contribution);
+            return "flt_div";
         }
         else if(instr_check(FLOAT_REM, i_name)){        
-            add("flt_rem", contribution);
+            return "flt_rem";
         }
         else if(instr_check(SPECIAL, i_name)){        
-            add("flt_rem", contribution);
+            return "flt_rem";
         }
     }
     else if(instr_check(BITWISE, i_name)){    
-        add("bitwise", contribution);
+        return "bitwise";
     }
     else if(instr_check(AGGREGATE, i_name)){    
-        add("aggregate", contribution);
+        return "aggregate";
     }
     else if(instr_check(VECTOR, i_name)){    
-        add("vector", contribution);    
+        return "vector";
     }     
     else if(const LoadInst *li = dyn_cast<LoadInst>(&inst)) {
-        add("load", contribution);
-        checkAddrSpace(li->getPointerAddressSpace()); 
+        return "load";
+        // checkAddrSpace(li->getPointerAddressSpace()); 
         // TODO: distinguish local from global memory
         // add("load_local"), add("load_global")
     }
     else if (const StoreInst *si = dyn_cast<StoreInst>(&inst)) {
-        add("store", contribution);
-        checkAddrSpace(si->getPointerAddressSpace()); 
+        return "store";
+        // checkAddrSpace(si->getPointerAddressSpace()); 
         // TODO: distinguish local from global memory
         // add("load_local"), add("load_global")
-    } else {
-        add("other", contribution);
-    }    
+    }
+    return "other";
 }
 
-void full_feature_set::eval_instruction(const llvm::Instruction &inst, int contribution){    
-    string i_name = inst.getOpcodeName();
-    //cout << i_name << endl;
-    add(i_name, contribution);
+string full_feature_set::eval_instruction(const llvm::Instruction &inst, int contribution){    
+    return inst.getOpcodeName();
 }
 
-void grewe11_feature_set::eval_instruction(const llvm::Instruction &inst, int contribution){
+string grewe11_feature_set::eval_instruction(const llvm::Instruction &inst, int contribution){
     // TODO FIXME XXX Nadjib
     // implementation missing
+    return "";
 }
 
 AddressSpaceType celerity::checkAddrSpace(const unsigned addrSpaceId) {

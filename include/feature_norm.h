@@ -14,12 +14,15 @@ enum class feature_norm {
 // TODO TOFIX XXX so far only simple linear normalization is implemented	             
 inline 
 void normalize(feature_set &fs){ 
-    float instructionContribution = 1.0f / float(fs.instructionTotContrib);
-    if(fs.instructionTotContrib == 0) 
-        instructionContribution = 0.f; // we don't like NAN
-    for(std::pair<std::string, int> entry : fs.raw){
-        float instTypeNum = float(entry.second);
-        fs.feat[entry.first] = instTypeNum * instructionContribution;
+    for (const auto& kv : fs.raw) {
+        llvm::Function *func = kv.first;
+        float instructionContribution = 1.0f / float(fs.instructionTotContrib[func]);
+        if(fs.instructionTotContrib[func] == 0) 
+            instructionContribution = 0.f; // we don't like NAN
+        for(std::pair<std::string, int> entry : fs.raw[func]){
+            float instTypeNum = float(entry.second);
+            fs.feat[func][entry.first] = instTypeNum * instructionContribution;
+        }
     }
 }
  

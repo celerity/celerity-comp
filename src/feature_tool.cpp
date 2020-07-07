@@ -6,11 +6,15 @@
 #include <llvm/Bitcode/BitcodeReader.h>
 #include <llvm/IR/LLVMContext.h>
 
+#include <llvm/IRReader/IRReader.h>
+#include <llvm/Support/SourceMgr.h>
+
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/Analysis/LoopInfo.h> // InfoWrapperPass
+#include <llvm/Analysis/CallGraph.h>
 
 #include "feature_set.h"
-#include "feature_eval.h"
+#include "feature_pass.h"
 
 using namespace std;
 using namespace llvm;
@@ -77,6 +81,11 @@ int main(int argc, char* argv[]) {
     LLVMContext context;
     MemoryBufferRef memRef = (*fileBuffer)->getMemBufferRef();
     Expected<unique_ptr<Module>> bcModule = parseBitcodeFile(memRef, context);
+    if(!bcModule){ // if there is an error
+      // try reading it as IR file
+      SMDiagnostic err;
+      bcModule = parseIRFile(fileName, err, context, [](StringRef) { return None; });
+    }
 /*  XXX fixme add error handling
     if(!bcModule()){ // if there is an error
       Error err = bcModule.takeError(); // ?
@@ -103,29 +112,31 @@ int main(int argc, char* argv[]) {
     }
 
     // define a feature evaluation technique
-    celerity::feature_eval *fe;
+    celerity::feature_pass *fe;
     string feat_eval_opt = input.getCmdOption("-fe");
     if (!feat_eval_opt.empty()){ // XXX to be supported flags: {normal|kofler|cr}
-        if(feat_eval_opt == "kofler")
-            fe = new celerity::kofler13_eval(fs);
+        if(feat_eval_opt == "kofler") {
+            fe = new celerity::kofler13_pass(fs);
         //else if(feat_eval_opt =="cr")
         //    fe = new celerity::costrelation_set(fs);
-        else if(feat_eval_opt == "normal")
-            fe = new celerity::feature_eval(fs);
-    }
-    else {
+        } else if(feat_eval_opt == "normal") {
+            fe = new celerity::feature_pass(fs);
+        }
+    } else {
         // default, no command line flag
-        fe = new celerity::feature_eval(fs);
+        fe = new celerity::feature_pass(fs);
         feat_eval_opt = "normal";
     }
 
     cout << "feature-set: " << feat_set_opt << ", feature-evaluation-technique: " << feat_eval_opt << endl;
 
     // We build a pass manager that load our pass and dependent passes 
-    // (e.g., LoopInfoWrapperPass si required by kofler13_eval)    
+    // (e.g., LoopInfoWrapperPass is required by kofler13_eval)    
     legacy::PassManager manager;    
     llvm::Pass *loop_analysis = new llvm::LoopInfoWrapperPass();
     manager.add(loop_analysis);
+    llvm::Pass *call_graph_wrapper_pass = new llvm::CallGraphWrapperPass();
+    manager.add(call_graph_wrapper_pass);
     manager.add(fe);
     Module &module = *(*bcModule);
     manager.run(module); // note: this also prints the features in cerr
