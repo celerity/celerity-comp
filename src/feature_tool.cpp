@@ -12,6 +12,7 @@
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/Analysis/LoopInfo.h> // InfoWrapperPass
 #include <llvm/Analysis/CallGraph.h>
+#include <llvm/Analysis/ScalarEvolution.h>
 
 #include "feature_set.h"
 #include "feature_pass.h"
@@ -137,6 +138,12 @@ int main(int argc, char* argv[]) {
     manager.add(loop_analysis);
     llvm::Pass *call_graph_wrapper_pass = new llvm::CallGraphWrapperPass();
     manager.add(call_graph_wrapper_pass);
+    if(feat_eval_opt == "kofler") {
+        llvm::Pass *scev = new llvm::ScalarEvolutionWrapperPass();
+        manager.add(scev);
+    }
+
+    //ModulePassManager manager;
     manager.add(fe);
     Module &module = *(*bcModule);
     manager.run(module); // note: this also prints the features in cerr

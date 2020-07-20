@@ -13,7 +13,7 @@ using namespace std;
 void feature_set::print(ostream &os){
     for (const auto& kv : raw) {
         Function *func = kv.first;
-        os << "Features for function: " << func->getName().str() << endl;
+        os << "Features for function: " << (func->hasName() ? func->getName().str() : "(anonymous)") << endl;
         vector<string> feat_names;
         feat_names.reserve(feat[func].size());
         for(std::pair<string,float> el : feat[func])	

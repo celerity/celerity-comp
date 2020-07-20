@@ -29,18 +29,18 @@ enum class feature_pass_mode {
  * The extraction of features from a single instruction is delegated to a feature set class.
  * In this basic implementation, BB's instruction contributions are summed up.
  */
-class feature_pass : public llvm::CallGraphSCCPass {
-//class feature_pass : public llvm::ModulePass {
+//class feature_pass : public llvm::CallGraphSCCPass {
+class feature_pass : public llvm::ModulePass {
  public:
     static char ID; 
     feature_set *features;
     gpu_feature_set default_feature_set;
 
-    feature_pass() : llvm::CallGraphSCCPass(ID) {        
+    feature_pass() : llvm::ModulePass(ID) {        
         features = &default_feature_set;        
     }
 
-    feature_pass(feature_set *fs) : llvm::CallGraphSCCPass(ID) {
+    feature_pass(feature_set *fs) : llvm::ModulePass(ID) {
         features = fs;
     }
     virtual ~feature_pass() {}
@@ -49,6 +49,7 @@ class feature_pass : public llvm::CallGraphSCCPass {
     virtual void eval_function(llvm::Function &fun);
 
     /* Overrides LLVM CallGraphSCCPass method */
+    virtual bool runOnModule(llvm::Module &m);
     virtual bool runOnSCC(llvm::CallGraphSCC &SCC);
     virtual void getAnalysisUsage(llvm::AnalysisUsage &au) const {au.addRequired<llvm::CallGraphWrapperPass>();};
     void finalize();
@@ -68,6 +69,9 @@ class kofler13_pass : public feature_pass {
 
     virtual void getAnalysisUsage(llvm::AnalysisUsage &info) const;
     virtual void eval_function(llvm::Function &fun);
+
+private:
+  void getLoopNestWeights(std::map<const llvm::BasicBlock *, int> multiplier, llvm::Loop *loop);
 };
 
 /*  Feature extraction based on cost realation */

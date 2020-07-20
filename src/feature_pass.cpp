@@ -2,6 +2,7 @@
 
 #include <llvm/Analysis/LoopInfo.h>
 #include <llvm/Analysis/CallGraphSCCPass.h>
+#include <llvm/Analysis/ScalarEvolution.h>
 
 #include <llvm/Analysis/CallGraph.h>
 #include <llvm/ADT/SCCIterator.h>
@@ -27,7 +28,7 @@ void feature_pass::eval_BB(BasicBlock &bb){
     }
 }	
 
-void feature_pass::eval_function(llvm::Function &fun){
+void feature_pass::eval_function(Function &fun){
     for (llvm::BasicBlock &bb : fun) 
     eval_BB(bb);
 }
@@ -36,7 +37,38 @@ void feature_pass::finalize(){
     normalize(*features);
 }
 
-bool feature_pass::runOnSCC(llvm::CallGraphSCC &SCC) {
+bool feature_pass::runOnModule(Module& m) {
+    CallGraph &CG = getAnalysis<CallGraphWrapperPass>().getCallGraph();
+    //bool Changed = doInitialization(CG);
+  
+    // Walk the callgraph in bottom-up SCC order.
+    scc_iterator<CallGraph*> CGI = scc_begin(&CG);
+  
+    CallGraphSCC CurSCC(CG, &CGI);
+    while (!CGI.isAtEnd()) {
+        // Copy the current SCC and increment past it so that the pass can hack
+        // on the SCC if it wants to without invalidating our iterator.
+        const std::vector<CallGraphNode *> &NodeVec = *CGI;
+        CurSCC.initialize(NodeVec);
+        runOnSCC(CurSCC);
+        ++CGI;
+    }
+    /*CallGraph& cg = getAnalysis<CallGraphWrapperPass>().getCallGraph();
+
+    scc_iterator<CallGraph*> cgSccIter = scc_begin(&cg);
+    CallGraphSCC curSCC(cg, (void*) &(m.getContext()));
+    while (!cgSccIter.isAtEnd())
+    {
+        const vector<CallGraphNode*>& nodeVec = *cgSccIter;
+        curSCC.initialize(nodeVec);
+        runOnSCC(curSCC);
+        ++cgSccIter;
+    }*/
+
+    return false;
+}
+
+bool feature_pass::runOnSCC(CallGraphSCC &SCC) {
     for (auto &cgnode : SCC) {
         Function *func = cgnode->getFunction();
         if (func) {
@@ -52,15 +84,21 @@ bool feature_pass::runOnSCC(llvm::CallGraphSCC &SCC) {
 
 void kofler13_pass::getAnalysisUsage(AnalysisUsage &AU) const {
     AU.setPreservesAll();
-    AU.addRequired<llvm::CallGraphWrapperPass>();
-    //AU.addRequired<LoopInfoWrapperPass>();
+    AU.addRequired<CallGraphWrapperPass>();
+    AU.addRequired<LoopInfoWrapperPass>();
+    AU.addRequired<ScalarEvolutionWrapperPass>();
 }
+
+void kofler13_pass::getLoopNestWeights(std::map<const llvm::BasicBlock *, int> multiplier, Loop *loop) {
+
+}
+
 /*
  * Current limitations:
  *  - it only works on natual loops (nested loops may be missing)
  *  - it does not implement yet the static loop bound check (multiplier = static loop bound)
  */
-void kofler13_pass::eval_function(llvm::Function &func) {
+void kofler13_pass::eval_function(Function &func) {
     // Current implementation requires that the LoopInfoWrapperPass pass calculates the loop information, 
     // thus it should be ran before ofthis pass.    
     
@@ -76,11 +114,31 @@ void kofler13_pass::eval_function(llvm::Function &func) {
     const int default_loop_contribution = 100;
     //getAnalysis<LoopInfo>(F);
     LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>(func).getLoopInfo();
-    for(const Loop *loop : LI) {
-        // cerr << "loop found" << endl;
-        for(const BasicBlock *bb : loop->getBlocks()) {
-            // cerr << "BB in loop!" << endl;
-            multiplier[bb] = multiplier[bb] * default_loop_contribution;
+    ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>(func).getSE();
+    for(const Loop *topLevelLoop : LI) {
+         cerr << "loop " << topLevelLoop->getName().str() << " in function : " << func.getName().str()
+        //      << " with smallConstantTripCount: " << SE.getSmallConstantTripCount(topLevelLoop)
+        //      << " smallConstantMaxTripCount: " << SE.getSmallConstantMaxTripCount(topLevelLoop)
+        //      << " smallConstantTripMultiple: " << SE.getSmallConstantTripMultiple(topLevelLoop)
+        //      //<< " exiting block: " << topLevelLoop->getExitingBlock()->getName().str()
+              << endl;
+        auto loopnest = topLevelLoop->getLoopsInPreorder();
+        for (const Loop *loop : loopnest) {
+            cerr << "    Subloop " << loop->getName().str() << " tripCount: " << SE.getSmallConstantTripCount(loop) << "\n";
+            unsigned tripCount = SE.getSmallConstantTripCount(loop);
+            // int contribution = default_loop_contribution; // = tripCount > 1 ? tripCount : default_loop_contribution;
+            for(const BasicBlock *bb : loop->getBlocks()) {
+                int contribution;
+		if (tripCount > 1 && bb == loop->getExitingBlock()) {
+		    contribution = tripCount;
+		} else if (tripCount > 1) {
+		    contribution = tripCount - 1;
+		} else {
+		    contribution = default_loop_contribution;
+		}
+                multiplier[bb] = multiplier[bb] * contribution;
+                // cerr << "        BB " << bb->getName().str() << " contribution " << contribution << " total " << multiplier[bb] << "\n";
+            }
         }
     }
     /// 3. evaluation
@@ -95,11 +153,15 @@ void kofler13_pass::eval_function(llvm::Function &func) {
 
 }
 
-
 // Pass registration.
 
 // Old-style pass registration for <opt> (registering dynamically loaded passes).
 static RegisterPass<feature_pass> feature_eval_pass("feature-pass", "Feature evaluation");
 static RegisterPass<kofler13_pass> kofler13_eval_pass("kofler13-pass", "Kofler13 feature evaluation");
 //static RegisterPass<costrelation_eval> cr_eval_pass("costrelation_eval", "Cost relation feature evaluation");
+
+
+//INITIALIZE_PASS_BEGIN(kofler13_pass, "kofler13_pass", "Kofler's feature evaluation", false, false)
+//INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+//INITIALIZE_PASS_END(kofler13_pass, "kofler13_pass", "Kofler's feature evaluation", false, false)
 
