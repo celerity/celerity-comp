@@ -69,9 +69,6 @@ class kofler13_pass : public feature_pass {
 
     virtual void getAnalysisUsage(llvm::AnalysisUsage &info) const;
     virtual void eval_function(llvm::Function &fun);
-
-private:
-  void getLoopNestWeights(std::map<const llvm::BasicBlock *, int> multiplier, llvm::Loop *loop);
 };
 
 /*  Feature extraction based on cost realation */

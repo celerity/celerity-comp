@@ -89,14 +89,9 @@ void kofler13_pass::getAnalysisUsage(AnalysisUsage &AU) const {
     AU.addRequired<ScalarEvolutionWrapperPass>();
 }
 
-void kofler13_pass::getLoopNestWeights(std::map<const llvm::BasicBlock *, int> multiplier, Loop *loop) {
-
-}
-
 /*
  * Current limitations:
  *  - it only works on natual loops (nested loops may be missing)
- *  - it does not implement yet the static loop bound check (multiplier = static loop bound)
  */
 void kofler13_pass::eval_function(Function &func) {
     // Current implementation requires that the LoopInfoWrapperPass pass calculates the loop information, 
