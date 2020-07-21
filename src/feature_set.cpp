@@ -61,9 +61,9 @@ string feature_set::get_type_prefix(const llvm::Instruction &inst) {
         return "f32.";
     } else if (t->isDoubleTy()) {
         return "f64.";
-    } else if (t->isIntegerTy()) {
+    } /*else if (t->isIntegerTy()) {
         return "i" + to_string(t->getIntegerBitWidth()) + ".";
-    }
+    }*/
     return "";
 }
 
