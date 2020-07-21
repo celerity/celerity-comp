@@ -39,7 +39,6 @@ void feature_pass::finalize(){
 
 bool feature_pass::runOnModule(Module& m) {
     CallGraph &CG = getAnalysis<CallGraphWrapperPass>().getCallGraph();
-    //bool Changed = doInitialization(CG);
   
     // Walk the callgraph in bottom-up SCC order.
     scc_iterator<CallGraph*> CGI = scc_begin(&CG);
@@ -53,17 +52,6 @@ bool feature_pass::runOnModule(Module& m) {
         runOnSCC(CurSCC);
         ++CGI;
     }
-    /*CallGraph& cg = getAnalysis<CallGraphWrapperPass>().getCallGraph();
-
-    scc_iterator<CallGraph*> cgSccIter = scc_begin(&cg);
-    CallGraphSCC curSCC(cg, (void*) &(m.getContext()));
-    while (!cgSccIter.isAtEnd())
-    {
-        const vector<CallGraphNode*>& nodeVec = *cgSccIter;
-        curSCC.initialize(nodeVec);
-        runOnSCC(curSCC);
-        ++cgSccIter;
-    }*/
 
     return false;
 }
@@ -107,21 +95,14 @@ void kofler13_pass::eval_function(Function &func) {
 
     // 2. for each BB in a loop, we multiply that "loop multiplier" times 100
     const int default_loop_contribution = 100;
-    //getAnalysis<LoopInfo>(F);
     LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>(func).getLoopInfo();
     ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>(func).getSE();
     for(const Loop *topLevelLoop : LI) {
-         cerr << "loop " << topLevelLoop->getName().str() << " in function : " << func.getName().str()
-        //      << " with smallConstantTripCount: " << SE.getSmallConstantTripCount(topLevelLoop)
-        //      << " smallConstantMaxTripCount: " << SE.getSmallConstantMaxTripCount(topLevelLoop)
-        //      << " smallConstantTripMultiple: " << SE.getSmallConstantTripMultiple(topLevelLoop)
-        //      //<< " exiting block: " << topLevelLoop->getExitingBlock()->getName().str()
-              << endl;
+         cerr << "loop " << topLevelLoop->getName().str() << " in function : " << func.getName().str() << endl;
         auto loopnest = topLevelLoop->getLoopsInPreorder();
         for (const Loop *loop : loopnest) {
             cerr << "    Subloop " << loop->getName().str() << " tripCount: " << SE.getSmallConstantTripCount(loop) << "\n";
             unsigned tripCount = SE.getSmallConstantTripCount(loop);
-            // int contribution = default_loop_contribution; // = tripCount > 1 ? tripCount : default_loop_contribution;
             for(const BasicBlock *bb : loop->getBlocks()) {
                 int contribution;
 		if (tripCount > 1 && bb == loop->getExitingBlock()) {
@@ -154,9 +135,4 @@ void kofler13_pass::eval_function(Function &func) {
 static RegisterPass<feature_pass> feature_eval_pass("feature-pass", "Feature evaluation");
 static RegisterPass<kofler13_pass> kofler13_eval_pass("kofler13-pass", "Kofler13 feature evaluation");
 //static RegisterPass<costrelation_eval> cr_eval_pass("costrelation_eval", "Cost relation feature evaluation");
-
-
-//INITIALIZE_PASS_BEGIN(kofler13_pass, "kofler13_pass", "Kofler's feature evaluation", false, false)
-//INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-//INITIALIZE_PASS_END(kofler13_pass, "kofler13_pass", "Kofler's feature evaluation", false, false)
 
