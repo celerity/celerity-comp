@@ -1,4 +1,5 @@
 #include <fstream>
+#include <string>
 
 
 #include <llvm/Support/MemoryBuffer.h>
@@ -13,24 +14,26 @@ using namespace std;
 void feature_set::print(ostream &os){
     for (const auto& kv : raw) {
         Function *func = kv.first;
-        os << "Features for function: " << (func->hasName() ? func->getName().str() : "(anonymous)") << endl;
-        vector<string> feat_names;
-        feat_names.reserve(feat[func].size());
-        for(std::pair<string,float> el : feat[func])	
-            feat_names.push_back(el.first);	
-        std::sort(feat_names.begin(),feat_names.end());
-        // print in alphabetical order
-        os << "name           raw       feat" << endl;
-        for(string &name : feat_names){    
-            string p_name = name;
-            string p_raw  = std::to_string(raw[func][name]);
-            string p_feat = std::to_string(feat[func][name]);
-            p_name.resize(15,' ');
-            p_raw.resize(10,' ');
-            p_feat.resize(10,' ');
-            os << p_name << p_raw << p_feat << endl;	
+        if (!raw[func].empty()) {
+            os << "Features for function: " << (func->hasName() ? func->getName().str() : "(anonymous)") << endl;
+            vector<string> feat_names;
+            feat_names.reserve(feat[func].size());
+            for(std::pair<string,float> el : feat[func])	
+                feat_names.push_back(el.first);	
+            std::sort(feat_names.begin(),feat_names.end());
+            // print in alphabetical order
+            os << "name           raw       feat" << endl;
+            for(string &name : feat_names){    
+                string p_name = name;
+                string p_raw  = std::to_string(raw[func][name]);
+                string p_feat = std::to_string(feat[func][name]);
+                p_name.resize(15,' ');
+                p_raw.resize(10,' ');
+                p_feat.resize(10,' ');
+                os << p_name << p_raw << p_feat << endl;	
+            }
+            os << endl;
         }
-        os << endl;
     }
 }
 
@@ -126,7 +129,20 @@ string gpu_feature_set::eval_instruction(const llvm::Instruction &inst, int cont
 }
 
 string full_feature_set::eval_instruction(const llvm::Instruction &inst, int contribution){    
-    return inst.getOpcodeName();
+    string i_name = inst.getOpcodeName();
+    if(instr_check(BIN_OPS,i_name)) {
+        Type *t = inst.getType();
+        if (t->isHalfTy()) {
+	    return "f16." + i_name;
+	} else if (t->isFloatTy()) {
+            return "f32." + i_name;
+	} else if (t->isDoubleTy()) {
+	    return "f64." + i_name;
+	} else if (t->isIntegerTy()) {
+	    return "i" + to_string(t->getIntegerBitWidth()) + "." + i_name;
+	}
+    }
+    return i_name;
 }
 
 string grewe11_feature_set::eval_instruction(const llvm::Instruction &inst, int contribution){
