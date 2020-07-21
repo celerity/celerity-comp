@@ -53,6 +53,20 @@ void feature_set::normalize(){
 	celerity::normalize(*this);
 }
 
+string feature_set::get_type_prefix(const llvm::Instruction &inst) {
+    Type *t = inst.getType();
+    if (t->isHalfTy()) {
+        return "f16.";
+    } else if (t->isFloatTy()) {
+        return "f32.";
+    } else if (t->isDoubleTy()) {
+        return "f64.";
+    } else if (t->isIntegerTy()) {
+        return "i" + to_string(t->getIntegerBitWidth()) + ".";
+    }
+    return "";
+}
+
 
 // List of LLVM instructions mapped into a specific feature
 const set<string> BIN_OPS = {"add","fadd", "sub", "fsub", "mul", "fmul", "udiv", "sdiv", "fdiv", "urem", "srem", "frem"};//rem- remainder of a division by...
@@ -89,19 +103,19 @@ string gpu_feature_set::eval_instruction(const llvm::Instruction &inst, int cont
             return "int_rem";
         }
         else if(instr_check(FLOAT_ADDSUB, i_name)){        
-            return "flt_addsub";
+            return get_type_prefix(inst) + "addsub";
         }
         else if(instr_check(FLOAT_MUL, i_name)){        
-            return "flt_mul";
+            return get_type_prefix(inst) + "mul";
         }
         else if(instr_check(FLOAT_DIV, i_name)){        
-            return "flt_div";
+            return get_type_prefix(inst) + "div";
         }
         else if(instr_check(FLOAT_REM, i_name)){        
-            return "flt_rem";
+            return get_type_prefix(inst) + "rem";
         }
         else if(instr_check(SPECIAL, i_name)){        
-            return "flt_rem";
+            return get_type_prefix(inst) + "call";
         }
     }
     else if(instr_check(BITWISE, i_name)){    
@@ -131,16 +145,7 @@ string gpu_feature_set::eval_instruction(const llvm::Instruction &inst, int cont
 string full_feature_set::eval_instruction(const llvm::Instruction &inst, int contribution){    
     string i_name = inst.getOpcodeName();
     if(instr_check(BIN_OPS,i_name)) {
-        Type *t = inst.getType();
-        if (t->isHalfTy()) {
-	    return "f16." + i_name;
-	} else if (t->isFloatTy()) {
-            return "f32." + i_name;
-	} else if (t->isDoubleTy()) {
-	    return "f64." + i_name;
-	} else if (t->isIntegerTy()) {
-	    return "i" + to_string(t->getIntegerBitWidth()) + "." + i_name;
-	}
+        return get_type_prefix(inst) + i_name;
     }
     return i_name;
 }

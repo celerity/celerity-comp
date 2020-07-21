@@ -68,7 +68,8 @@ public:
     virtual ~feature_set(){}
 protected:
     /* Abstract method that evaluates an llvm instruction in terms of feature representation. */
-    virtual string eval_instruction(const llvm::Instruction &inst, int contribution = 1) = 0;        
+    virtual string eval_instruction(const llvm::Instruction &inst, int contribution = 1) = 0;
+    virtual string get_type_prefix(const llvm::Instruction &inst);
 };
 
 
