@@ -8,7 +8,8 @@ SET(CMAKE_CXX_COMPILER /usr/bin/g++)
 SET(CMAKE_CXX_FLAGS "-Wall -fno-rtti")
 
 # Requires LLVM
-find_package(LLVM REQUIRED CONFIG NO_DEFAULT_PATH)
+#find_package(LLVM REQUIRED CONFIG NO_DEFAULT_PATH)
+find_package(LLVM REQUIRED CONFIG) # removed NO_DEFAULT_PATH option because Cmake was not finding llvm
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
