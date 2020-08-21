@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 3.8)
-project(CELERITY_COMP CXX)
+#project(CELERITY_COMP CXX) remove project to not have problems when added as submodule in other projects
 
 # Make sure to use g++ to be able to pass linker flags -Wl,-znodelete to fix bug with llvm autoregistring passes
 # https://github.com/sampsyo/llvm-pass-skeleton/issues/7#issuecomment-401834287
@@ -9,18 +9,17 @@ SET(CMAKE_CXX_FLAGS "-Wall -fno-rtti")
 
 # Requires LLVM
 #find_package(LLVM REQUIRED CONFIG NO_DEFAULT_PATH)
-find_package(LLVM REQUIRED CONFIG) # removed NO_DEFAULT_PATH option because Cmake was not finding llvm
+find_package(LLVM REQUIRED CONFIG) # removed NO_DEFAULT_PATH to make it find llvm
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
 
-
-
-include_directories(${LLVM_INCLUDE_DIRS} "${PROJECT_SOURCE_DIR}/include")
+## Always use relative paths because this project is intended to be used within other projects
+include_directories(${LLVM_INCLUDE_DIRS} include)
 add_definitions(${LLVM_DEFINITIONS})
 set(FEATURE_SRC src/feature_pass.cpp src/feature_set.cpp)
 
-# Build the feature extraction tool 
+# Build the feature extraction tool
 add_executable(features ${FEATURE_SRC} src/feature_tool.cpp)
 llvm_map_components_to_libnames(llvm_libs support core irreader analysis)
 target_link_libraries(features ${llvm_libs})
