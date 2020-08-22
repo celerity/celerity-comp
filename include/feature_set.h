@@ -46,15 +46,15 @@ public:
         }
         // handling function calls
         if (llvm::CallInst *call = llvm::dyn_cast<llvm::CallInst>(&inst)) {
-	    if (func != call->getCalledFunction() && call->getCalledFunction()) {
-	        // ensure this is not a recursion, which is not supported
-		int currInstNum = instructionNum[func];
+            if (func != call->getCalledFunction() && call->getCalledFunction()) {
+                // ensure this is not a recursion, which is not supported
+                int currInstNum = instructionNum[func];
                 unordered_map<string, int> fraw = raw[call->getCalledFunction()];
-	        for (const auto& kv : fraw) {
-	            add(func, kv.first, kv.second);
-	        }
-		instructionNum[func] = currInstNum + instructionNum[call->getCalledFunction()];
-	    }
+                for (const auto &kv : fraw) {
+                    add(func, kv.first, kv.second);
+                }
+                instructionNum[func] = currInstNum + instructionNum[call->getCalledFunction()];
+            }
         } else {
             add(func, eval_instruction(inst), contribution);
         }
