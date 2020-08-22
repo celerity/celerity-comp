@@ -37,10 +37,24 @@ add_library(feature_pass MODULE ${FEATURE_SRC} src/feature_pass.cpp)
 add_library(celerity_interface_pass SHARED src/celerity_interface_pass.cpp)
 target_compile_options(celerity_interface_pass PRIVATE -Wl,-znodelete) # workoaround to fix bug with llvm autoregistring passes
 if (LLVM IN_LIST LLVM_AVAILABLE_LIBS)
-  target_link_libraries(celerity_interface_pass LLVM clangTooling)
+  target_link_libraries(celerity_interface_pass LLVM)
 else()
-  target_link_libraries(celerity_interface_pass LLVMSupport clangTooling)
+  target_link_libraries(celerity_interface_pass LLVMSupport)
 endif()
+
+
+#---------- crel extraction pass target ------------------------------
+
+add_definitions(${LLVM_DEFINITIONS})
+
+# Build the feature extraction tool
+add_executable(crel-extract-tool src/crel_extract_tool.cpp src/feature_set.cpp src/feature_pass.cpp)
+target_include_directories(crel-extract-tool  PUBLIC ${LLVM_INCLUDE_DIRS} )
+llvm_map_components_to_libnames(llvm_libs support core irreader analysis)
+target_link_libraries(crel-extract-tool ${llvm_libs})
+target_compile_options(features PUBLIC -fno-rtti)
+
+#---------- Install targets ------------------------------
 
 # move example scripts and examples (make install)
 install(PROGRAMS "examples/features_from_OpenCL.sh" DESTINATION "${CMAKE_BINARY_DIR}" )
