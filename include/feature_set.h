@@ -1,3 +1,4 @@
+
 #pragma once
 #include <string>
 #include <iostream>
@@ -65,7 +66,7 @@ public:
     virtual void print_to_cout();
     virtual void print_to_file(const string&);
     virtual void normalize();
-    virtual ~feature_set(){}
+    virtual ~feature_set() = default;
 protected:
     /* Abstract method that evaluates an llvm instruction in terms of feature representation. */
     virtual string eval_instruction(const llvm::Instruction &inst, int contribution = 1) = 0;
@@ -87,14 +88,5 @@ class grewe11_feature_set : public feature_set {
 class full_feature_set : public feature_set {
     string eval_instruction(const llvm::Instruction &inst, int contribution = 1);    
 };
-
-
-/* Memory address space identifiers, used for feature recognition. */
-const unsigned privateAddressSpace = 0;
-const unsigned localAddressSpace   = 1;
-const unsigned globalAddressSpace  = 2;
-enum class AddressSpaceType { Private, Local, Global, Unknown };
-AddressSpaceType checkAddrSpace(const unsigned addrSpaceId);
-
 
 } // end namespace celerity

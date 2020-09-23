@@ -152,7 +152,7 @@ int main(int argc, char* argv[]) {
     const string &outFile = input.getCmdOption("-o");
     if (outFile.empty()){
       // do nothing
-      // fs->print_to_cout(); 
+      fs->print_to_cout();
     }
     else {
       fs->print_to_file(outFile);

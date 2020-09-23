@@ -11,8 +11,8 @@
 #include <llvm/Analysis/CallGraph.h>
 #include <llvm/Analysis/ScalarEvolution.h>
 
-#include "feature_set.h"
-#include "feature_pass.h"
+#include "crel_feature_set.h"
+#include "crel_feature_pass.h"
 
 
 using namespace std;
@@ -91,20 +91,34 @@ int main(int argc, char* argv[]) {
 
     // Compile .cl to LLVM IR
     // This assumes clang++ exist
-    std::string bcFileName = clFileName + ".bc";
-    std::string llFileName = clFileName + ".ll";
+    std::string opts_FileName = clFileName + "opts.txt";
+    std::string noopt_bcFileName = clFileName + ".bc";
+    std::string noopt_llFileName = clFileName + ".ll";
+    std::string bcFileName = clFileName + "_opt.bc"; // optimised file
+    std::string llFileName = clFileName + "_opt.ll";
 
     // Assumes clang exists in PATH and points to latest eg: clang10
-    std::string bc_comp_command = "clang -c -x cl -emit-llvm -cl-std=CL2.0 -Xclang -finclude-default-header -target amdgcn-amd " + clFileName + " -o " + bcFileName;
-    std::string ll_comp_command = "clang -S -x cl -emit-llvm -cl-std=CL2.0 -Xclang -finclude-default-header -target amdgcn-amd " + clFileName + " -o " + llFileName;
+    // -O0 : doesn't inline non-kernel functions which is required by our tool
+    // -O3: does also loop unrolling not good when we are testing loop analysis
+    std::string bc_comp_command = "clang-10 -c -x cl -emit-llvm -cl-std=CL2.0 -Xclang -finclude-default-header -O3 -target amdgcn-amd  -foptimization-record-file="+opts_FileName+" " + clFileName + " -o " + noopt_bcFileName;
+    std::string opt_comp_command = "opt-10 --loop-simplify --adce --always-inline --amdgpu-always-inline --strip-dead-prototypes " + noopt_bcFileName + " -o " + bcFileName;
+    // Disassembly for debugging
+    std::string ll_noopt_comp_command = "llvm-dis-10 " + noopt_bcFileName + " -o " + noopt_llFileName;
+    std::string ll_opt_comp_command   = "llvm-dis-10 " + bcFileName + " -o " + llFileName;
 
     // Generate bitcode .bc
     if (verbose) cout << "Executing ...  " << bc_comp_command << endl;
     std::system(bc_comp_command.c_str());
 
+    // Optimise bitcode .bc
+    if (verbose) cout << "Executing ...  " << opt_comp_command << endl;
+    std::system(opt_comp_command.c_str());
+
     // Generate IR .ll for debugging
-    if (verbose) cout << "Executing ...  " << ll_comp_command << endl;
-    //std::system(ll_comp_command.c_str());
+    if (verbose) cout << "Executing ...  " << ll_noopt_comp_command << endl;
+    std::system(ll_noopt_comp_command.c_str());
+    if (verbose) cout << "Executing ...  " << ll_opt_comp_command << endl;
+    std::system(ll_opt_comp_command.c_str());
 
 
     // Parse LLVM Bitcode to MemoryBuffer
@@ -114,7 +128,7 @@ int main(int argc, char* argv[]) {
         exit(1);
     }
     else {
-        if(verbose) cout << "kernel bitcode IR file loaded: " << bcFileName << endl;
+        if(verbose) cout << endl << "kernel bitcode IR file loaded: " << bcFileName << endl;
     }
 
     LLVMContext context;
@@ -129,14 +143,12 @@ int main(int argc, char* argv[]) {
 */ 
 
     // define a feature set   
-    celerity::feature_set *fs;
-
-    //fs = new grewe11_feature_set();
-    fs = new celerity::gpu_feature_set();
+    celerity::crel_feature_set *fs;
+    fs = new celerity::poly_grewe11_feature_set();
+    //fs = new celerity::poly_gpu_feature_set();
 
     // define a feature evaluation technique
-    celerity::feature_pass *fe = new celerity::feature_pass(fs);
-    celerity::kofler13_pass *kpass = new celerity::kofler13_pass(fs);
+    auto *crelPass = new celerity::poly_crel_pass(fs);
 
 
     // We build a pass manager that load our pass and dependent passes
@@ -144,17 +156,15 @@ int main(int argc, char* argv[]) {
     legacy::PassManager manager;
     llvm::Pass *loop_analysis = new llvm::LoopInfoWrapperPass();
     manager.add(loop_analysis);
-    llvm::Pass *call_graph_wrapper_pass = new llvm::CallGraphWrapperPass();
-    manager.add(call_graph_wrapper_pass);
     llvm::Pass *scev = new llvm::ScalarEvolutionWrapperPass();
     manager.add(scev);
 
     //manager.add(fe);
-    manager.add(kpass);
+    manager.add(crelPass);
 
 
     Module &module = *(*bcModule);
-    if(verbose) cout << "Running cost relation pass ... " << endl;
+    if(verbose) cout << "Running cost relation pass ... " << endl << endl;
     manager.run(module); // note: this also prints the features in cerr
 
     // final printing to either cout or file

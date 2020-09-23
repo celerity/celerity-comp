@@ -129,13 +129,13 @@ string gpu_feature_set::eval_instruction(const llvm::Instruction &inst, int cont
     }     
     else if(const LoadInst *li = dyn_cast<LoadInst>(&inst)) {
         return "load";
-        // checkAddrSpace(li->getPointerAddressSpace()); 
+        // getOpenclAddrSpaceType(li->getPointerAddressSpace());
         // TODO: distinguish local from global memory
         // add("load_local"), add("load_global")
     }
     else if (const StoreInst *si = dyn_cast<StoreInst>(&inst)) {
         return "store";
-        // checkAddrSpace(si->getPointerAddressSpace()); 
+        // getOpenclAddrSpaceType(si->getPointerAddressSpace());
         // TODO: distinguish local from global memory
         // add("load_local"), add("load_global")
     }
@@ -154,33 +154,5 @@ string grewe11_feature_set::eval_instruction(const llvm::Instruction &inst, int 
     // TODO FIXME XXX Nadjib
     // implementation missing
     return "";
-}
-
-AddressSpaceType celerity::checkAddrSpace(const unsigned addrSpaceId) {
-    /*
-    From AMD's backend: 
-    https://llvm.org/docs/AMDGPUUsage.html#amdgpu-address-spaces
-    https://llvm.org/docs/AMDGPUUsage.html#address-space-mapping
-    we have the following address space definition:
-      Address Space - Memory Space
-                  1 - Private (Scratch)
-                  2 - Local (group/LDS)
-                  3 - Global
-                 nd - Constant
-                 nd - Generic (Flat)
-                 nd - Region (GDS)
-    Note that some bakends are currently implementing only part of them. 
-    We return Global (3) for the the other the currently unmapped address space (constant, generic, region).
-    */
-    if(addrSpaceId == localAddressSpace) {
-        return AddressSpaceType::Local;
-    } else if(addrSpaceId == globalAddressSpace) {
-        return AddressSpaceType::Global;
-    } else if(addrSpaceId == privateAddressSpace) {
-        return AddressSpaceType::Private;
-    } else {
-        //std::cerr << "WARNING: unkwnown address space id: " << addrSpaceId << std::endl;
-        return AddressSpaceType::Global;
-    }
 }
 
