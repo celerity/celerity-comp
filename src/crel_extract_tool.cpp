@@ -1,5 +1,6 @@
 #include <vector>
 #include <algorithm>
+#include "stdio.h"
 
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/Support/MemoryBuffer.h>
@@ -47,7 +48,7 @@ private:
 
 
 // Global variables
-const string usage = "Usage:\n\t-h help\n\t-i <kernel cl file>\n\t-o <output file>\n\t-v verbose\n";
+const string usage = "Usage:\n\t-h help\n\t-i <kernel cl file>\n\t-o <csv file>\n\t-v verbose\n";
 bool verbose = false;
 std::string outFile;
 
@@ -70,13 +71,6 @@ int main(int argc, char* argv[]) {
     }
 
     outFile = input.getCmdOption("-o");
-    if (outFile.empty()){
-        // do nothing
-        // fs->print_to_cout();
-    }
-    else {
-        outFile = "output.cl";
-    }
 
     // Parse .cl MemoryBuffer
     ErrorOr<unique_ptr<MemoryBuffer>> clFileBuffer = MemoryBuffer::getFile(clFileName);
@@ -100,7 +94,7 @@ int main(int argc, char* argv[]) {
     // Assumes clang exists in PATH and points to latest eg: clang10
     // -O0 : doesn't inline non-kernel functions which is required by our tool
     // -O3: does also loop unrolling not good when we are testing loop analysis
-    std::string bc_comp_command = "clang-10 -c -x cl -emit-llvm -cl-std=CL2.0 -Xclang -finclude-default-header -O3 -target amdgcn-amd  -foptimization-record-file="+opts_FileName+" " + clFileName + " -o " + noopt_bcFileName;
+    std::string bc_comp_command = "clang-10 -c -x cl -emit-llvm -cl-std=CL2.0 -Xclang -finclude-default-header -O3 -target amdgcn-amd -DM=1024 -DLSIZE=64 -DCLASS=CLASS_A -foptimization-record-file="+opts_FileName+" " + clFileName + " -o " + noopt_bcFileName;
     std::string opt_comp_command = "opt-10 --loop-simplify --adce --always-inline --amdgpu-always-inline --strip-dead-prototypes " + noopt_bcFileName + " -o " + bcFileName;
     // Disassembly for debugging
     std::string ll_noopt_comp_command = "llvm-dis-10 " + noopt_bcFileName + " -o " + noopt_llFileName;
@@ -167,8 +161,23 @@ int main(int argc, char* argv[]) {
     if(verbose) cout << "Running cost relation pass ... " << endl << endl;
     manager.run(module); // note: this also prints the features in cerr
 
-    // final printing to either cout or file
-    fs->print_to_cout();
+    // Print to file if outfile is provided
+    if (!outFile.empty()){
+        fs->print_to_file(outFile);
+    } else {
+        // final printing to either cout or file
+        fs->print_to_cout();
+    }
+
+    // Delete all generated files
+    if (!verbose) {
+        if( remove(opts_FileName.c_str()) != 0 ) perror( "Error deleting file" );
+        if( remove(noopt_bcFileName.c_str()) != 0 ) perror( "Error deleting file" );
+        if( remove(noopt_llFileName.c_str()) != 0 ) perror( "Error deleting file" );
+        if( remove(bcFileName.c_str()) != 0 ) perror( "Error deleting file" );
+        if( remove(llFileName.c_str()) != 0 ) perror( "Error deleting file" );
+    }
+
 
     //the pass manager does these two deallocations:
     //delete fe; delete loop_analysis;

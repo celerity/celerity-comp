@@ -8,6 +8,7 @@ using namespace celerity;
 using namespace llvm;
 using namespace std;
 
+bool debug = false;
 
 // Initialization of a static member
 char crel_feature_pass::ID = 0;
@@ -87,7 +88,7 @@ void poly_crel_pass::eval_function(Function &func) {
     if (!isKernelFunction(func)) {
         return;
     } else {
-        cout << "processing kernel function: " << name << "\n";
+        if (debug) cout << "processing kernel function: " << name << "\n";
     }
 
     // Create the kernel object
@@ -223,33 +224,36 @@ void poly_crel_pass::eval_function(Function &func) {
 
 
     // Debug printing
-    for (const auto& entry : featureSet->kernels[name].loopMultipliers) {
-        const Loop *loop = entry.first;
-        const crel_mpoly poly = entry.second;
-        auto backedgeExpr = SE.getBackedgeTakenCount(loop);
-        //SE.getMinusSCEV()
+    if (debug) {
+        for (const auto &entry : featureSet->kernels[name].loopMultipliers) {
+            const Loop *loop = entry.first;
+            const crel_mpoly poly = entry.second;
+            auto backedgeExpr = SE.getBackedgeTakenCount(loop);
+            //SE.getMinusSCEV()
 
-        cout << "    loop " << loop->getLoopID() <<
-             " tripCount: " << SE.getSmallConstantTripCount(loop) <<
-             " mpoly: " << poly.toString(kernel.getVarNames()) <<
-             " subloops: " << loop->getSubLoops().size() <<
-             " depth: " << loop->getLoopDepth() <<
-             " backedgeExpr: " << backedgeExpr <<
-             " backedge SCEV type: " << backedgeExpr->getExpressionSize() <<
-             " isCanonical: " << loop->isCanonical(SE) <<
-             " isLoopSimplifyForm: " << loop->isLoopSimplifyForm() <<
-             " " << endl;
-    }
-    //cout << endl;
-
-    for (const BasicBlock &bb : func.getBasicBlockList()) {
-        for (const auto& feat_name : featureSet->feat_names) {
-            cout << "   BB " << &bb <<
-                 " feature: " << feat_name <<
-                 " mpoly: " << featureSet->kernels[name].bbFeatures[&bb][feat_name].toString(kernel.getVarNames()) <<
+            cout << "    loop " << loop->getLoopID() <<
+                 " tripCount: " << SE.getSmallConstantTripCount(loop) <<
+                 " mpoly: " << poly.toString(kernel.getVarNames()) <<
+                 " subloops: " << loop->getSubLoops().size() <<
+                 " depth: " << loop->getLoopDepth() <<
+                 " backedgeExpr: " << backedgeExpr <<
+                 " backedge SCEV type: " << backedgeExpr->getExpressionSize() <<
+                 " isCanonical: " << loop->isCanonical(SE) <<
+                 " isLoopSimplifyForm: " << loop->isLoopSimplifyForm() <<
                  " " << endl;
         }
-        cout << endl;
+        //cout << endl;
+
+        for (const BasicBlock &bb : func.getBasicBlockList()) {
+            for (const auto &feat_name : featureSet->feat_names) {
+                cout << "   BB " << &bb <<
+                     " feature: " << feat_name <<
+                     " mpoly: " << featureSet->kernels[name].bbFeatures[&bb][feat_name].toString(kernel.getVarNames())
+                     <<
+                     " " << endl;
+            }
+            cout << endl;
+        }
     }
 
 }
@@ -262,7 +266,7 @@ void poly_crel_pass::eval_function(Function &func) {
  */
 crel_mpoly poly_crel_pass::evaluateSCEV(ScalarEvolution &SE, const crel_kernel &kernel, crel_mpoly &poly, const SCEV *scev) {
 
-    cout << " SCEV type: " << scev->getSCEVType() << " poly " << poly.toString() << endl;
+    if (debug) cout << " SCEV type: " << scev->getSCEVType() << " poly " << poly.toString() << endl;
 
     if (scev->getSCEVType() == scUnknown) {
 
@@ -272,9 +276,11 @@ crel_mpoly poly_crel_pass::evaluateSCEV(ScalarEvolution &SE, const crel_kernel &
             auto varSCEV = SE.getSCEV(var.value);
 
             if (scev == varSCEV) {
-                cout << " var: " << var.name << " varSCEV: "<< varSCEV << " scev: " << scev << " value: ";
-                varSCEV->print(llvm::outs());
-                cout << endl;
+                if (debug) {
+                    cout << " var: " << var.name << " varSCEV: " << varSCEV << " scev: " << scev << " value: ";
+                    varSCEV->print(llvm::outs());
+                    cout << endl;
+                }
 
                 crel_mpoly varPoly(kernel.runtime_vars.size());
                 varPoly.setVarCoeff(i, 1);
@@ -283,7 +289,9 @@ crel_mpoly poly_crel_pass::evaluateSCEV(ScalarEvolution &SE, const crel_kernel &
         }
 
         // If we reach here, means that SCEV variable was not part of the kernel variables
-        cerr << "ERROR: encountered a SCEV that uses an un-supoorted variable.";
+        cerr << "ERROR: encountered a SCEV that uses an un-supoorted variable: ";
+        scev->print(llvm::outs());
+        cout << endl;
 
     } else if (const auto *constExpr = dyn_cast<SCEVConstant>(scev) ) {
 
@@ -338,9 +346,9 @@ crel_mpoly poly_crel_pass::evaluateSCEV(ScalarEvolution &SE, const crel_kernel &
         // If number of operands is > 1 Handle max and min expressions by evaluating the non-constant SCEV
         if (minMaxExpr->getNumOperands() > 1) {
             for (auto operand: minMaxExpr->operands()) {
-//                cout << " minmax scev: " << operand << " num:" << minMaxExpr->getNumOperands() << " type: " << operand->getSCEVType() << " value: ";
+//                if (debug) cout << " minmax scev: " << operand << " num:" << minMaxExpr->getNumOperands() << " type: " << operand->getSCEVType() << " value: ";
 //                operand->print(llvm::outs());
-//                cout << endl;
+//                if (debug) cout << endl;
 
                 if (operand->getSCEVType() != scConstant) {
                     return evaluateSCEV(SE, kernel, poly, operand);

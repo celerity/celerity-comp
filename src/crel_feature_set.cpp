@@ -18,15 +18,6 @@ void crel_feature_set::print(ostream &os) {
         if (!kernels[funcID].features.empty()) {
             os << "Features for kernel-function: " << funcID << endl;
 
-            // Get all feature names and sort them
-            vector<string> feat_names;
-            feat_names.reserve(kernels[funcID].features.size());
-            for(auto el : kernels[funcID].features)
-                feat_names.push_back(el.first);
-            std::sort(feat_names.begin(),feat_names.end());
-
-            // print in alphabetical order
-            os << "name           raw" << endl;
             for(string &name : feat_names) {
                 string p_name = name;
                 string p_raw  = kernels[funcID].features[name].toString(kernels[funcID].getVarNames());
@@ -39,15 +30,40 @@ void crel_feature_set::print(ostream &os) {
     }
 }
 
+void crel_feature_set::print_csv(ostream &os) {
+
+    // Print header
+    //os << "kernel,comp,rational,mem,localmem,coalesced,atomic" << endl;
+    os << "kernel";
+    for(string &name : feat_names) {
+        string p_name = name;
+        os << "," << name;
+    }
+    os << endl;
+
+    // Print features
+    for (const auto& kv : kernels) {
+        string funcID = kv.first;
+        if (!kernels[funcID].features.empty()) {
+            os << funcID;
+            for(string &name : feat_names) {
+                string p_raw  = kernels[funcID].features[name].toString(kernels[funcID].getVarNames());
+                os << "," << p_raw;
+            }
+            os << endl;
+        }
+    }
+}
+
 void crel_feature_set::print_to_cout(){
     crel_feature_set::print(cout);
 }
 
 void crel_feature_set::print_to_file(const string &out_file){
-	cout << "Writing to file: " << out_file << endl;
+	cout << "Writing features to file: " << out_file << endl;
 	ofstream outstream;
 	outstream.open (out_file);
-	print(outstream);
+    print_csv(outstream);
 	outstream.close();
 }
 
@@ -245,14 +261,18 @@ string poly_grewe11_feature_set::eval_instruction(const llvm::Instruction &inst)
             string calledFuncName = func->getGlobalIdentifier();
 
             // Check if we have calls to get_global_id, get_local_id, get_global_size, get_local_size
+            std::size_t found_barrier = calledFuncName.find("barrier");
             std::size_t found_get_global_id = calledFuncName.find("get_global_id");
             std::size_t found_get_local_id = calledFuncName.find("get_local_id");
             std::size_t found_get_global_size = calledFuncName.find("get_global_size");
             std::size_t found_get_local_size = calledFuncName.find("get_local_size");
+            std::size_t found_get_num_groups = calledFuncName.find("get_num_groups");
+            std::size_t found_get_group_id = calledFuncName.find("get_group_id");
 
             // If any of these calls was found
-            if (found_get_global_id!=std::string::npos || found_get_local_id!=std::string::npos ||
-                found_get_global_size!=std::string::npos || found_get_local_size!=std::string::npos) {
+            if (found_barrier!=std::string::npos || found_get_global_id!=std::string::npos || found_get_local_id!=std::string::npos ||
+                found_get_global_size!=std::string::npos || found_get_local_size!=std::string::npos ||
+                found_get_num_groups!=std::string::npos || found_get_group_id!=std::string::npos) {
                 //std::cout << "found get_global_id function call --> " << inst.getFunction()->getGlobalIdentifier() << " " << func->getGlobalIdentifier() << endl;
             } else {
                 std::cerr << "WARNINIG: found non-kernel function call --> " << inst.getFunction()->getGlobalIdentifier() << " " << func->getGlobalIdentifier() << endl;

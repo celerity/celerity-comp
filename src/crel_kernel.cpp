@@ -19,7 +19,7 @@ crel_kernel::crel_kernel(llvm::Function* function) : function(function), instruc
     // We need to loop through all arguments of this function
    for (uint32_t i =0; i< function->arg_size(); i++) {
        // Create the runtime variable and add it to the list
-       string varName = "k"+to_string(i);
+       string varName = "ka"+to_string(i);
        crel_variable var = {varName, function->getArg(i), i, true};
        runtime_vars.push_back(var);
 
@@ -40,10 +40,14 @@ crel_kernel::crel_kernel(llvm::Function* function) : function(function), instruc
                 std::size_t found_get_local_id = calledFuncName.find("get_local_id");
                 std::size_t found_get_global_size = calledFuncName.find("get_global_size");
                 std::size_t found_get_local_size = calledFuncName.find("get_local_size");
+                std::size_t found_get_num_groups = calledFuncName.find("get_num_groups");
+                std::size_t found_get_group_id = calledFuncName.find("get_group_id");
+
 
                 // If any of these calls was found
                 if (found_get_global_id!=std::string::npos || found_get_local_id!=std::string::npos ||
-                    found_get_global_size!=std::string::npos || found_get_local_size!=std::string::npos) {
+                    found_get_global_size!=std::string::npos || found_get_local_size!=std::string::npos ||
+                    found_get_num_groups!=std::string::npos || found_get_group_id!=std::string::npos) {
 
                     auto *arg = llvm::dyn_cast<llvm::ConstantInt>(ci->getOperand(0));
                     auto *ciValue = llvm::dyn_cast<llvm::Value>(ci);
@@ -51,19 +55,27 @@ crel_kernel::crel_kernel(llvm::Function* function) : function(function), instruc
 
                     // Add to runtime variables
                     if (found_get_global_id!=std::string::npos) {
-                        crel_variable var = { "g"+to_string(argConstantInt), ciValue, argConstantInt, false};
+                        crel_variable var = { "gi"+to_string(argConstantInt), ciValue, argConstantInt, false};
                         runtime_vars.push_back(var);
 
                     } else if (found_get_local_id!=std::string::npos) {
-                        crel_variable var = { "l"+to_string(argConstantInt), ciValue, argConstantInt, false};
+                        crel_variable var = { "li"+to_string(argConstantInt), ciValue, argConstantInt, false};
                         runtime_vars.push_back(var);
 
                     } else if (found_get_global_size!=std::string::npos) {
-                        crel_variable var = { "s"+to_string(argConstantInt), ciValue, argConstantInt, false};
+                        crel_variable var = { "gs"+to_string(argConstantInt), ciValue, argConstantInt, false};
                         runtime_vars.push_back(var);
 
                     } else if (found_get_local_size!=std::string::npos) {
-                        crel_variable var = { "z"+to_string(argConstantInt), ciValue, argConstantInt, false};
+                        crel_variable var = { "ls"+to_string(argConstantInt), ciValue, argConstantInt, false};
+                        runtime_vars.push_back(var);
+
+                    } else if (found_get_num_groups!=std::string::npos) {
+                        crel_variable var = { "ng"+to_string(argConstantInt), ciValue, argConstantInt, false};
+                        runtime_vars.push_back(var);
+
+                    } else if (found_get_group_id!=std::string::npos) {
+                        crel_variable var = { "gr"+to_string(argConstantInt), ciValue, argConstantInt, false};
                         runtime_vars.push_back(var);
                     }
                 }
@@ -72,10 +84,10 @@ crel_kernel::crel_kernel(llvm::Function* function) : function(function), instruc
         }
     }
 
-   for (const auto& var: runtime_vars) {
-       cout << " var: " << var.name << " value: " << var.value << " arg_index: " << var.value_index << endl;
-   }
-   cout << endl;
+//   for (const auto& var: runtime_vars) {
+//       cout << " var: " << var.name << " value: " << var.value << " arg_index: " << var.value_index << endl;
+//   }
+//   cout << endl;
 
 }
 

@@ -51,6 +51,7 @@ public:
     //virtual float get_feature(string &feature_name){ return feat[feature_name]; }
     virtual void print(std::ostream&);
     virtual void print_to_cout();
+    virtual void print_csv(std::ostream&);
     virtual void print_to_file(const string&);
     virtual ~crel_feature_set()= default;
 protected:
