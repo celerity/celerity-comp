@@ -66,4 +66,5 @@ private:
     crel_mpoly evaluateSCEV(llvm::ScalarEvolution &SE, const crel_kernel &kernel, crel_mpoly &poly, const llvm::SCEV *scev);
 };
 
+
 } // end namespace celerity

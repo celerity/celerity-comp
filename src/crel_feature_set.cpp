@@ -215,17 +215,17 @@ string poly_grewe11_feature_set::eval_instruction(const llvm::Instruction &inst)
     // mem: are global load & stores
     // localmem are local load & stores
     if (auto *li = dyn_cast<LoadInst>(&inst)) {
-        if (getOpenclAddrSpaceType(li->getPointerAddressSpace()) == OpenclAddressSpaceType::Constant ||
-            getOpenclAddrSpaceType(li->getPointerAddressSpace()) == OpenclAddressSpaceType::Global) {
+        if (get_cl_address_space_type(li->getPointerAddressSpace()) == cl_address_space_type::Constant ||
+                get_cl_address_space_type(li->getPointerAddressSpace()) == cl_address_space_type::Global) {
             return "mem";
-        } else if (getOpenclAddrSpaceType(li->getPointerAddressSpace()) == OpenclAddressSpaceType::Local) {
+        } else if (get_cl_address_space_type(li->getPointerAddressSpace()) == cl_address_space_type::Local) {
             return "localmem";
         }
     } else if (auto *si = dyn_cast<StoreInst>(&inst)) {
-        if (getOpenclAddrSpaceType(si->getPointerAddressSpace()) == OpenclAddressSpaceType::Constant ||
-            getOpenclAddrSpaceType(si->getPointerAddressSpace()) == OpenclAddressSpaceType::Global) {
+        if (get_cl_address_space_type(si->getPointerAddressSpace()) == cl_address_space_type::Constant ||
+                get_cl_address_space_type(si->getPointerAddressSpace()) == cl_address_space_type::Global) {
             return "mem";
-        } else if (getOpenclAddrSpaceType(si->getPointerAddressSpace()) == OpenclAddressSpaceType::Local) {
+        } else if (get_cl_address_space_type(si->getPointerAddressSpace()) == cl_address_space_type::Local) {
             return "localmem";
         }
     // Comp instr
@@ -274,6 +274,9 @@ string poly_grewe11_feature_set::eval_instruction(const llvm::Instruction &inst)
                 found_get_global_size!=std::string::npos || found_get_local_size!=std::string::npos ||
                 found_get_num_groups!=std::string::npos || found_get_group_id!=std::string::npos) {
                 //std::cout << "found get_global_id function call --> " << inst.getFunction()->getGlobalIdentifier() << " " << func->getGlobalIdentifier() << endl;
+
+            } else if (is_cl_khr_base_atomics(calledFuncName) || is_cl_builtin_atomics(calledFuncName)) {
+                return "atomic";
             } else {
                 std::cerr << "WARNINIG: found non-kernel function call --> " << inst.getFunction()->getGlobalIdentifier() << " " << func->getGlobalIdentifier() << endl;
             }

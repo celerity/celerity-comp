@@ -12,6 +12,7 @@
 
 #include "crel_mpoly.h"
 #include "crel_kernel.h"
+#include "crel_llvm_helper.h"
 
 
 using namespace std;

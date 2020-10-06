@@ -85,7 +85,7 @@ void poly_crel_pass::eval_function(Function &func) {
     // We found out that definitions for non-kernel functions are kept inside the bitcode/ll but they are
     // all inlined.
     // We emit a warning when a function call to non-kernel function is performed. (check eval instruction implementation)
-    if (!isKernelFunction(func)) {
+    if (!is_cl_kernel_function(func)) {
         return;
     } else {
         if (debug) cout << "processing kernel function: " << name << "\n";
@@ -268,6 +268,8 @@ crel_mpoly poly_crel_pass::evaluateSCEV(ScalarEvolution &SE, const crel_kernel &
 
     if (debug) cout << " SCEV type: " << scev->getSCEVType() << " poly " << poly.toString() << endl;
 
+    if (kernel.name == "cffts1") { scev->print(llvm::outs()); cout <<endl; }
+
     if (scev->getSCEVType() == scUnknown) {
 
         // Check which variable is dependent on this SCEV
@@ -277,7 +279,7 @@ crel_mpoly poly_crel_pass::evaluateSCEV(ScalarEvolution &SE, const crel_kernel &
 
             if (scev == varSCEV) {
                 if (debug) {
-                    cout << " var: " << var.name << " varSCEV: " << varSCEV << " scev: " << scev << " value: ";
+                    cout << " kernel: " << kernel.name << " var: " << var.name << " varSCEV: " << varSCEV << " scev: " << scev << " value: ";
                     varSCEV->print(llvm::outs());
                     cout << endl;
                 }
@@ -289,9 +291,9 @@ crel_mpoly poly_crel_pass::evaluateSCEV(ScalarEvolution &SE, const crel_kernel &
         }
 
         // If we reach here, means that SCEV variable was not part of the kernel variables
-        cerr << "ERROR: encountered a SCEV that uses an un-supoorted variable: ";
-        scev->print(llvm::outs());
-        cout << endl;
+        cerr << "ERROR: in kernel: "<< kernel.name << " encountered a SCEV that uses an un-supoorted variable: ";
+        scev->print(llvm::errs());
+        cerr << endl;
 
     } else if (const auto *constExpr = dyn_cast<SCEVConstant>(scev) ) {
 
@@ -358,8 +360,10 @@ crel_mpoly poly_crel_pass::evaluateSCEV(ScalarEvolution &SE, const crel_kernel &
             return evaluateSCEV(SE, kernel, poly, minMaxExpr->getOperand(0));
         }
 
-    } else if (scev->getSCEVType() == scCouldNotCompute || scev->getSCEVType() == scAddRecExpr)  {
-        cerr << "WARNINIG: could not compute SCEV " << endl;
+    } else if (scev->getSCEVType() == scCouldNotCompute)  {
+        cerr << "WARNINIG: could not compute SCEV for kernel " << kernel.name << endl;
+    } else if (scev->getSCEVType() == scAddRecExpr) {
+        cerr << "WARNINIG: could not compute AddRecExpr SCEV for kernel " << kernel.name << endl;
     }
 
     // Always return poly

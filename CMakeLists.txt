@@ -49,16 +49,19 @@ else()
 endif()
 
 
-#---------- crel extraction pass target ------------------------------
+#---------- crel extraction library and tool ------------------------------
 
 add_definitions(${LLVM_DEFINITIONS})
 
-# Build the feature extraction tool
-add_executable(crel-extract-tool src/crel_mpoly.cpp src/crel_kernel.cpp src/crel_extract_tool.cpp src/crel_feature_set.cpp src/crel_feature_pass.cpp)
-target_include_directories(crel-extract-tool  PUBLIC ${LLVM_INCLUDE_DIRS} )
+# Build the extractor lib
+add_library(crel-extractor STATIC src/crel_mpoly.cpp src/crel_kernel.cpp src/crel_extractor.cpp src/crel_feature_set.cpp src/crel_feature_pass.cpp include/crel_llvm_helper.h)
+target_include_directories(crel-extractor  PUBLIC ${LLVM_INCLUDE_DIRS} )
 llvm_map_components_to_libnames(llvm_libs support core irreader analysis)
-target_link_libraries(crel-extract-tool ${llvm_libs} ${FLINT_LIBRARIES})
-target_compile_options(features PUBLIC -fno-rtti)
+target_link_libraries(crel-extractor ${llvm_libs} ${FLINT_LIBRARIES})
+
+# Build the feature extraction tool
+add_executable(crel-extract-tool src/crel_extract_tool.cpp)
+target_link_libraries(crel-extract-tool crel-extractor)
 
 #---------- Install targets ------------------------------
 
