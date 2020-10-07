@@ -60,8 +60,8 @@ int main(int argc, char* argv[]) {
 
     // define a feature set
     celerity::crel_feature_set *fs;
-    //fs = new celerity::poly_grewe11_feature_set();
-    fs = new celerity::poly_gpu_feature_set();
+    fs = new celerity::poly_grewe11_feature_set();
+    //fs = new celerity::poly_gpu_feature_set();
 
     std::string extraCompilerArgs = "-DM=1024 -DLSIZE=64 -DCLASS=CLASS_A";
 
