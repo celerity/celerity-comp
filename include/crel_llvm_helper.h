@@ -112,5 +112,19 @@ namespace celerity {
         return false;
     }
 
+    // TODO: Add more cl math functions
+    inline bool is_cl_builtin_math_func(const std::string &funcName) {
+        if (funcName.find("sqrtd") != std::string::npos ||
+            funcName.find("expd") != std::string::npos ||
+            funcName.find("logd") != std::string::npos ||
+            funcName.find("absd") != std::string::npos ||
+            funcName.find("fabsd") != std::string::npos ||
+            funcName.find("maxd") != std::string::npos ||
+            funcName.find("powd") != std::string::npos ) {
+            return true;
+        }
+        return false;
+    }
+
 }
 #endif //COST_RELATION_LLVM_HELPER_H

@@ -277,6 +277,8 @@ string poly_grewe11_feature_set::eval_instruction(const llvm::Instruction &inst)
 
             } else if (is_cl_khr_base_atomics(calledFuncName) || is_cl_builtin_atomics(calledFuncName)) {
                 return "atomic";
+            } else if (is_cl_builtin_math_func(calledFuncName)) {
+                return "comp";
             } else {
                 std::cerr << "WARNINIG: found non-kernel function call --> " << inst.getFunction()->getGlobalIdentifier() << " " << func->getGlobalIdentifier() << endl;
             }
