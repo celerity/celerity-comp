@@ -29,8 +29,9 @@ crel_mpoly::crel_mpoly() {
     fmpq_mpoly_init(fmpq_mpoly, context);
 
     // Set degrees for variables to be  MAX_MPOLY_DEGREE
-    slong degrees[] = {MAX_MPOLY_DEGREE};
-    fmpq_mpoly_degrees_si(degrees, fmpq_mpoly, context);
+    degrees.reserve(1); // make sure to reserve right amount of space
+    degrees.push_back(MAX_MPOLY_DEGREE);
+    fmpq_mpoly_degrees_si(&degrees[0], fmpq_mpoly, context);
 }
 
 crel_mpoly::crel_mpoly(const uint32_t numVars, const uint32_t degree) : num_vars(numVars) {
@@ -38,8 +39,8 @@ crel_mpoly::crel_mpoly(const uint32_t numVars, const uint32_t degree) : num_vars
     fmpq_mpoly_init(fmpq_mpoly, context);
 
     // Set degrees for variables to be MAX_MPOLY_DEGREE
-    std::vector<slong> degrees(numVars); // make sure to reserve right amount of space
-    for (auto item : degrees)
+    degrees.reserve(numVars); // make sure to reserve right amount of space
+    for (int i=0; i<numVars; i++)
         degrees.push_back(MAX_MPOLY_DEGREE);
 
     fmpq_mpoly_degrees_si(&degrees[0], fmpq_mpoly, context);

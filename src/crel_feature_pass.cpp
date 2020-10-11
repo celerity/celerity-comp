@@ -270,20 +270,18 @@ crel_mpoly poly_crel_pass::evaluateValue(const crel_kernel &kernel, llvm::Value 
 
     // Check which variable is dependent on this passed variable
     for (uint32_t i=0; i<kernel.runtime_vars.size(); i++) {
-        auto var = kernel.runtime_vars[i];
+        auto &var = kernel.runtime_vars[i];
 
         if (scevValue == var.value) {
-            crel_mpoly varPoly(kernel.runtime_vars.size());
-            varPoly.setVarCoeff(i, 1);
-            return varPoly;
+            auto varPoly = make_unique<crel_mpoly>(kernel.runtime_vars.size());
+            varPoly->setVarCoeff(i, 1);
+            return *varPoly;
         }
     }
 
     // If the variable was not found in kernel runtime variables -> means that it is an intermediate one
     // that is dependent on one of the kernel runtime variables
     // This case is handeled by just recursively evaluating the Value of this variable
-
-    auto scevInstruction = dyn_cast<llvm::Instruction>(scevValue);
 
     if (const auto *constExpr = dyn_cast<llvm::ConstantInt>(scevValue) ) {
 
@@ -294,35 +292,35 @@ crel_mpoly poly_crel_pass::evaluateValue(const crel_kernel &kernel, llvm::Value 
             constant = constExpr->getZExtValue();
         }
 
-        crel_mpoly constPoly(kernel.runtime_vars.size());
-        constPoly.setConstant64bit(constant);
-        return constPoly;
+        auto constPoly = make_unique<crel_mpoly>(kernel.runtime_vars.size());
+        constPoly->setConstant64bit(constant);
+        return *constPoly;
 
-    } else if (auto *addExpr = dyn_cast<llvm::AddOperator>(scevInstruction)) {
-        crel_mpoly addPoly(kernel.runtime_vars.size());
-        addPoly.set(evaluateValue(kernel, addExpr->getOperand(0)));
-        addPoly.add(evaluateValue(kernel, addExpr->getOperand(1)));
-        return addPoly;
+    } else if (const auto *addExpr = dyn_cast<llvm::AddOperator>(scevValue)) {
+        auto addPoly = make_unique<crel_mpoly>(kernel.runtime_vars.size());
+        addPoly->set(evaluateValue(kernel, addExpr->getOperand(0)));
+        addPoly->add(evaluateValue(kernel, addExpr->getOperand(1)));
+        return *addPoly;
 
-    } else if (auto *subExpr = dyn_cast<llvm::SubOperator>(scevInstruction)) {
-        crel_mpoly subPoly(kernel.runtime_vars.size());
-        subPoly.set(evaluateValue(kernel, subExpr->getOperand(0)));
-        subPoly.sub(evaluateValue(kernel, subExpr->getOperand(1)));
-        return subPoly;
+    } else if (const auto *subExpr = dyn_cast<llvm::SubOperator>(scevValue)) {
+        auto subPoly = make_unique<crel_mpoly>(kernel.runtime_vars.size());
+        subPoly->set(evaluateValue(kernel, subExpr->getOperand(0)));
+        subPoly->sub(evaluateValue(kernel, subExpr->getOperand(1)));
+        return *subPoly;
 
-    } else if (auto *divExpr = dyn_cast<llvm::SDivOperator>(scevInstruction)) {
-        crel_mpoly divPoly(kernel.runtime_vars.size());
-        divPoly.set(evaluateValue(kernel, divExpr->getOperand(0)));
-        divPoly.divideby(evaluateValue(kernel, divExpr->getOperand(1)));
-        return divPoly;
+    } else if (const auto *divExpr = dyn_cast<llvm::SDivOperator>(scevValue)) {
+        auto divPoly = make_unique<crel_mpoly>(kernel.runtime_vars.size());
+        divPoly->set(evaluateValue(kernel, divExpr->getOperand(0)));
+        divPoly->divideby(evaluateValue(kernel, divExpr->getOperand(1)));
+        return *divPoly;
 
-    } else if (auto *divExpr = dyn_cast<llvm::UDivOperator>(scevInstruction)) {
-        crel_mpoly divPoly(kernel.runtime_vars.size());
-        divPoly.set(evaluateValue(kernel, divExpr->getOperand(0)));
-        divPoly.divideby(evaluateValue(kernel, divExpr->getOperand(1)));
-        return divPoly;
+    } else if (const auto *udivExpr = dyn_cast<llvm::UDivOperator>(scevValue)) {
+        auto divPoly = make_unique<crel_mpoly>(kernel.runtime_vars.size());
+        divPoly->set(evaluateValue(kernel, udivExpr->getOperand(0)));
+        divPoly->divideby(evaluateValue(kernel, udivExpr->getOperand(1)));
+        return *divPoly;
 
-    } else if (auto *shlExpr = dyn_cast<llvm::ShlOperator>(scevInstruction)) {
+    } else if (const auto *shlExpr = dyn_cast<llvm::ShlOperator>(scevValue)) {
 
         // We first check is this value is constant otherwise we do not support this shift
         auto polyOp2 = evaluateValue(kernel, shlExpr->getOperand(1));
@@ -335,12 +333,12 @@ crel_mpoly poly_crel_pass::evaluateValue(const crel_kernel &kernel, llvm::Value 
             ulong op2Value = 1 << op2;
 
             // Return the corresponding mpoly
-            crel_mpoly shlPoly(kernel.runtime_vars.size());
-            shlPoly.set(polyOp1);
-            shlPoly.multiply(op2Value);
-            return shlPoly;
+            auto shlPoly = make_unique<crel_mpoly>(kernel.runtime_vars.size());
+            shlPoly->set(polyOp1);
+            shlPoly->multiply(op2Value);
+            return *shlPoly;
         }
-    } else if (auto *lshrExpr = dyn_cast<llvm::LShrOperator>(scevInstruction)) {
+    } else if (const auto *lshrExpr = dyn_cast<llvm::LShrOperator>(scevValue)) {
 
         // We first check is this value is constant otherwise we do not support this shift
         auto polyOp2 = evaluateValue(kernel, lshrExpr->getOperand(1));
@@ -353,62 +351,59 @@ crel_mpoly poly_crel_pass::evaluateValue(const crel_kernel &kernel, llvm::Value 
             ulong op2Value = 1 << op2;
 
             // Return the corresponding mpoly
-            crel_mpoly lshrPoly(kernel.runtime_vars.size());
-            lshrPoly.set(polyOp1);
-            lshrPoly.divideby(op2Value);
-            return lshrPoly;
+            auto lshrPoly = make_unique<crel_mpoly>(kernel.runtime_vars.size());
+            lshrPoly->set(polyOp1);
+            lshrPoly->divideby(op2Value);
+            return *lshrPoly;
         }
 
-    } else if ( scevInstruction->isBitwiseLogicOp()) {
+    } else if (const auto *scevInstruction = dyn_cast<llvm::Instruction>(scevValue) ) {
 
-        auto *bitwiseExpr = dyn_cast<llvm::BinaryOperator>(scevInstruction);
-        auto opCodeName = scevInstruction->getOpcodeName();
+        if ( scevInstruction->isBitwiseLogicOp()) {
 
-        if (string("and").compare(opCodeName) == 0) {
-            auto polyOp1 = evaluateValue(kernel, bitwiseExpr->getOperand(0));
-            auto polyOp2 = evaluateValue(kernel, bitwiseExpr->getOperand(1));
+            auto *bitwiseExpr = dyn_cast<llvm::BinaryOperator>(scevInstruction);
+            auto opCodeName = scevInstruction->getOpcodeName();
 
-            if (polyOp1.isConstant() && polyOp2.isConstant()) {
-                // Bitwise AND
-                auto result = polyOp1.getConstantNominator() & polyOp2.getConstantNominator();
+            if (string("and").compare(opCodeName) == 0) {
+                auto polyOp1 = evaluateValue(kernel, bitwiseExpr->getOperand(0));
+                auto polyOp2 = evaluateValue(kernel, bitwiseExpr->getOperand(1));
 
-                crel_mpoly andPoly(kernel.runtime_vars.size());
-                andPoly.setConstant64bit(result);
-                return andPoly;
+                if (polyOp1.isConstant() && polyOp2.isConstant()) {
+                    // Bitwise AND
+                    auto result = polyOp1.getConstantNominator() & polyOp2.getConstantNominator();
+
+                    auto andPoly = make_unique<crel_mpoly>(kernel.runtime_vars.size());
+                    andPoly->setConstant64bit(result);
+                    return *andPoly;
+                }
+
+            } else if (string("xor").compare(opCodeName) == 0) {
+                auto polyOp1 = evaluateValue(kernel, bitwiseExpr->getOperand(0));
+                auto polyOp2 = evaluateValue(kernel, bitwiseExpr->getOperand(1));
+
+                if (polyOp1.isConstant() && polyOp2.isConstant()) {
+                    // Bitwise AND
+                    auto result = polyOp1.getConstantNominator() ^ polyOp2.getConstantNominator();
+
+                    auto xorPoly = make_unique<crel_mpoly>(kernel.runtime_vars.size());
+                    xorPoly->setConstant64bit(result);
+                    return *xorPoly;
+                }
             }
 
-        } else if (string("xor").compare(opCodeName) == 0) {
-            auto polyOp1 = evaluateValue(kernel, bitwiseExpr->getOperand(0));
-            auto polyOp2 = evaluateValue(kernel, bitwiseExpr->getOperand(1));
-            auto poly1String = polyOp1.toString();
-            auto poly2String = polyOp2.toString();
-
-            if (polyOp1.isConstant() && polyOp2.isConstant()) {
-                // Bitwise AND
-                auto result = polyOp1.getConstantNominator() ^ polyOp2.getConstantNominator();
-
-                crel_mpoly andPoly(kernel.runtime_vars.size());
-                andPoly.setConstant64bit(result);
-                return andPoly;
-            }
         }
+//        else if (scevInstruction->getOpcode()==Instruction::PHI) {
+//
+//            auto *phiExpr = dyn_cast<llvm::PHINode>(scevInstruction);
+//            auto phiPoly = make_unique<crel_mpoly>(kernel.runtime_vars.size());
+//
+//            for ( int i=0; i<phiExpr->getNumIncomingValues(); i++) {
+//                phiPoly->maxjoin(evaluateValue(kernel, phiExpr->getIncomingValue(i)));
+//            }
+//            return *phiPoly;
+//        }
 
     }
-//    else if (scevInstruction->getOpcode()==Instruction::PHI) {
-//
-//        auto *phiExpr = dyn_cast<llvm::PHINode>(scevInstruction);
-//
-//        crel_mpoly phiPoly(kernel.runtime_vars.size());
-//
-//        int num = phiExpr->getNumIncomingValues();
-//
-//        for ( int i=0; i<phiExpr->getNumIncomingValues(); i++) {
-//            auto polyOp1 = evaluateValue(kernel, phiExpr->getIncomingValue(i));
-//            auto poly1String = polyOp1.toString();
-//            phiPoly.maxjoin(polyOp1);
-//        }
-//        return phiPoly;
-//    }
 
     // If we reach here, means that SCEV variable was not part of the kernel variables
     cerr << "ERROR: in kernel: "<< kernel.name << " encountered a SCEV that uses an un-supoorted variable: ";
@@ -416,9 +411,9 @@ crel_mpoly poly_crel_pass::evaluateValue(const crel_kernel &kernel, llvm::Value 
     cerr << endl;
 
     // If we fail to evalute return a constant
-    crel_mpoly constPoly(kernel.runtime_vars.size());
-    constPoly.setConstant(1);
-    return constPoly;
+    auto constPoly = make_unique<crel_mpoly>(kernel.runtime_vars.size());
+    constPoly->setConstant(1);
+    return *constPoly;
 
 }
 
@@ -439,43 +434,40 @@ crel_mpoly poly_crel_pass::evaluateSCEV(ScalarEvolution &SE, const crel_kernel &
         auto scevValue = scevUnknown->getValue();
 
         // Now try to get the mpoly of this value
-        auto polyVal = evaluateValue(kernel, scevValue);
-        string polyString = polyVal.toString();
-        return polyVal;
+        return evaluateValue(kernel, scevValue);
 
     } else if (const auto *constExpr = dyn_cast<SCEVConstant>(scev) ) {
 
-        crel_mpoly constPoly(kernel.runtime_vars.size());
-        constPoly.setConstant64bit(constExpr->getValue()->getValue().getSExtValue());
-        return constPoly;
+        auto constPoly = make_unique<crel_mpoly>(kernel.runtime_vars.size());
+        constPoly->setConstant64bit(constExpr->getValue()->getValue().getSExtValue());
+        return *constPoly;
 
     } else if (const auto *addExpr = dyn_cast<SCEVAddExpr>(scev) ) {
 
-        crel_mpoly addPoly(kernel.runtime_vars.size());
+        auto addPoly = make_unique<crel_mpoly>(kernel.runtime_vars.size());
         for (auto operand: addExpr->operands()) {
-            addPoly.add(evaluateSCEV(SE, kernel, loop, poly, operand));
+            addPoly->add(evaluateSCEV(SE, kernel, loop, poly, operand));
         }
-        return addPoly;
+        return *addPoly;
 
     } else if (const auto *mulExpr = dyn_cast<SCEVMulExpr>(scev) ) {
 
-        crel_mpoly multPoly(kernel.runtime_vars.size());
-        multPoly.setConstant(1);
+        auto multPoly = make_unique<crel_mpoly>(kernel.runtime_vars.size());
+        multPoly->setConstant(1);
         for (auto operand: mulExpr->operands()) {
-            multPoly.multiply(evaluateSCEV(SE, kernel, loop, poly, operand));
+            multPoly->multiply(evaluateSCEV(SE, kernel, loop, poly, operand));
         }
-        return multPoly;
+        return *multPoly;
 
     } else if (const auto *udivExpr = dyn_cast<SCEVUDivExpr>(scev) ) {
 
         auto lhs = udivExpr->getLHS();
         auto rhs = udivExpr->getRHS();
 
-        crel_mpoly divPoly(kernel.runtime_vars.size());
-        divPoly.setConstant(1);
-        poly.multiply(evaluateSCEV(SE, kernel, loop, poly, lhs));
-        poly.divideby(evaluateSCEV(SE, kernel, loop, poly, rhs));
-        return divPoly;
+        auto divPoly = make_unique<crel_mpoly>(kernel.runtime_vars.size());
+        divPoly->set(evaluateSCEV(SE, kernel, loop, poly, lhs));
+        divPoly->divideby(evaluateSCEV(SE, kernel, loop, poly, rhs));
+        return *divPoly;
 
     } else if (const auto *truncExpr = dyn_cast<SCEVTruncateExpr>(scev) ) {
         return evaluateSCEV(SE, kernel, loop, poly, truncExpr->getOperand());
@@ -514,9 +506,9 @@ crel_mpoly poly_crel_pass::evaluateSCEV(ScalarEvolution &SE, const crel_kernel &
         cerr << "in kernel: " << kernel.name << ". --> Returning a UNIT multiplier for this loop" << endl;
 
         // Return unit mpoly for this loop
-        crel_mpoly constPoly(kernel.runtime_vars.size());
-        constPoly.setConstant(1);
-        return constPoly;
+        auto constPoly = make_unique<crel_mpoly>(kernel.runtime_vars.size());
+        constPoly->setConstant(1);
+        return *constPoly;
 
     } else if (scev->getSCEVType() == scAddRecExpr) {
         cerr << "WARNINIG: could not compute AddRecExpr SCEV for kernel " << kernel.name << endl;

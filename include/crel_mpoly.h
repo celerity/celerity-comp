@@ -74,6 +74,8 @@ namespace celerity {
         fmpq_mpoly_ctx_t context{};
         fmpq_mpoly_t fmpq_mpoly{};
 
+        std::vector<slong> degrees;
+
     };
 
 }
