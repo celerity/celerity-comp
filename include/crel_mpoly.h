@@ -9,7 +9,8 @@
 #include <cstdint>
 #include <vector>
 #include <string>
-#include "flint/fmpz_mpoly.h"
+#include "flint/fmpq_mpoly.h"
+#include "flint/fmpz.h"
 
 using namespace std;
 
@@ -34,6 +35,11 @@ namespace celerity {
         void set(const crel_mpoly& poly2);
         bool isEqual(const crel_mpoly& poly2);
 
+        // is Constant
+        bool isConstant();
+        long getConstantNominator();
+        long getConstantDenominator();
+
 
         // Set to constant
         void setConstant(uint32_t constant);
@@ -44,9 +50,13 @@ namespace celerity {
         void add(const uint32_t constant);
         void add(const int constant);
         void add(const crel_mpoly& poly2);
+        void sub(const crel_mpoly& poly2);
+
 
         // Multiplication
+        void multiply(const long constant);
         void multiply(const crel_mpoly& poly2);
+        void divideby(const long constant);
         void divideby(const crel_mpoly& poly2);
 
         // Max join
@@ -54,14 +64,15 @@ namespace celerity {
 
         // Set var coeff
         void setVarCoeff(const uint32_t varIndex, const int coeff);
+        void setVarCoeff(const uint32_t varIndex, const int coeff, const int denom);
 
 
 
     private:
         // fmpz_mpoly_ctx_t is a structure holding information about the number of variables and the term ordering of an multivariate polynomial.
         uint32_t num_vars = 1;
-        fmpz_mpoly_ctx_t context{};
-        fmpz_mpoly_t fmpz_mpoly{};
+        fmpq_mpoly_ctx_t context{};
+        fmpq_mpoly_t fmpq_mpoly{};
 
     };
 

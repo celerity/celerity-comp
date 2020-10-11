@@ -7,10 +7,11 @@
 using namespace celerity;
 
 /**
- * Canonical representation of fmpz_mpoly.
- *   fmpz_mpoly = coeff1*term1 + coeff2*term2 + ....
+ * Canonical representation of fmpq_mpoly.
+ *   fmpq_mpoly = coeff1*term1 + coeff2*term2 + ....
  *   term1 = [3,2,1] : index of all variables => x^3+y^2+z
- * fmpz_mpoly is made of terms and each term is made of exponent vector of all variables.
+ *   coeff is rational number = nominator/denominator
+ * fmpq_mpoly is made of terms and each term is made of exponent vector of all variables.
  * The length of an exponent vector is the number of variables in the polynomial,
  * and the element at index 0 corresponds to the most significant variable.
  *
@@ -24,28 +25,28 @@ crel_mpoly::~crel_mpoly() {
 // Constructors
 crel_mpoly::crel_mpoly() {
     // Initialise to 1 variable
-    fmpz_mpoly_ctx_init(context, 1, ordering_t::ORD_DEGLEX);
-    fmpz_mpoly_init(fmpz_mpoly, context);
+    fmpq_mpoly_ctx_init(context, 1, ordering_t::ORD_DEGLEX);
+    fmpq_mpoly_init(fmpq_mpoly, context);
 
     // Set degrees for variables to be  MAX_MPOLY_DEGREE
     slong degrees[] = {MAX_MPOLY_DEGREE};
-    fmpz_mpoly_degrees_si(degrees, fmpz_mpoly, context);
+    fmpq_mpoly_degrees_si(degrees, fmpq_mpoly, context);
 }
 
 crel_mpoly::crel_mpoly(const uint32_t numVars, const uint32_t degree) : num_vars(numVars) {
-    fmpz_mpoly_ctx_init(context, numVars, ordering_t::ORD_DEGLEX);
-    fmpz_mpoly_init(fmpz_mpoly, context);
+    fmpq_mpoly_ctx_init(context, numVars, ordering_t::ORD_DEGLEX);
+    fmpq_mpoly_init(fmpq_mpoly, context);
 
     // Set degrees for variables to be MAX_MPOLY_DEGREE
     std::vector<slong> degrees(numVars); // make sure to reserve right amount of space
     for (auto item : degrees)
         degrees.push_back(MAX_MPOLY_DEGREE);
 
-    fmpz_mpoly_degrees_si(&degrees[0], fmpz_mpoly, context);
+    fmpq_mpoly_degrees_si(&degrees[0], fmpq_mpoly, context);
 
 }
 std::string crel_mpoly::toString() const {
-    return std::string(fmpz_mpoly_get_str_pretty(fmpz_mpoly, nullptr, context));
+    return std::string(fmpq_mpoly_get_str_pretty(fmpq_mpoly, nullptr, context));
 }
 
 /**
@@ -62,9 +63,9 @@ std::string crel_mpoly::toString(const vector<string>& varNames) const {
         for(const auto& string : varNames)
             runtime_vars_names.push_back(string.c_str());
 
-        result = std::string(fmpz_mpoly_get_str_pretty(fmpz_mpoly, runtime_vars_names.data(), context));
+        result = std::string(fmpq_mpoly_get_str_pretty(fmpq_mpoly, runtime_vars_names.data(), context));
     } else {
-        result = std::string(fmpz_mpoly_get_str_pretty(fmpz_mpoly, nullptr, context));
+        result = std::string(fmpq_mpoly_get_str_pretty(fmpq_mpoly, nullptr, context));
     }
 
     return result;
@@ -75,7 +76,7 @@ std::string crel_mpoly::toString(const vector<string>& varNames) const {
  * @param poly2
  */
 void crel_mpoly::set(const crel_mpoly &poly2) {
-    fmpz_mpoly_set(fmpz_mpoly, poly2.fmpz_mpoly, context);
+    fmpq_mpoly_set(fmpq_mpoly, poly2.fmpq_mpoly, context);
 }
 
 /**
@@ -84,7 +85,7 @@ void crel_mpoly::set(const crel_mpoly &poly2) {
  * @return
  */
 bool crel_mpoly::isEqual(const crel_mpoly &poly2) {
-    return (fmpz_mpoly_equal(fmpz_mpoly, poly2.fmpz_mpoly, context) == 1);
+    return (fmpq_mpoly_equal(fmpq_mpoly, poly2.fmpq_mpoly, context) == 1);
 }
 
 /**
@@ -92,18 +93,18 @@ bool crel_mpoly::isEqual(const crel_mpoly &poly2) {
  * @param constant
  */
 void crel_mpoly::setConstant(const uint32_t constant) {
-    fmpz_mpoly_set_ui(fmpz_mpoly, constant, context);
+    fmpq_mpoly_set_ui(fmpq_mpoly, constant, context);
 }
 /**
  * Set poly to signed integer constant
  * @param constant
  */
 void crel_mpoly::setConstant(const int constant) {
-    fmpz_mpoly_set_si(fmpz_mpoly, constant, context);
+    fmpq_mpoly_set_si(fmpq_mpoly, constant, context);
 }
 
 void crel_mpoly::setConstant64bit(int64_t constant) {
-    fmpz_mpoly_set_si(fmpz_mpoly, constant, context);
+    fmpq_mpoly_set_si(fmpq_mpoly, constant, context);
 }
 
 
@@ -112,7 +113,7 @@ void crel_mpoly::setConstant64bit(int64_t constant) {
  * @param constant
  */
 void crel_mpoly::add( const uint32_t constant) {
-    fmpz_mpoly_add_ui(fmpz_mpoly, fmpz_mpoly, constant, context);
+    fmpq_mpoly_add_ui(fmpq_mpoly, fmpq_mpoly, constant, context);
 }
 
 /**
@@ -120,7 +121,7 @@ void crel_mpoly::add( const uint32_t constant) {
  * @param constant
  */
 void crel_mpoly::add(const int constant) {
-    fmpz_mpoly_add_si(fmpz_mpoly, fmpz_mpoly, constant, context);
+    fmpq_mpoly_add_si(fmpq_mpoly, fmpq_mpoly, constant, context);
 }
 
 /**
@@ -128,22 +129,68 @@ void crel_mpoly::add(const int constant) {
  * @param poly2
  */
 void crel_mpoly::add(const crel_mpoly& poly2) {
-    // TODO: Check if we need to check which context to use by comparing degrees
-    fmpz_mpoly_add(fmpz_mpoly, fmpz_mpoly, poly2.fmpz_mpoly, context);
+    fmpq_mpoly_add(fmpq_mpoly, fmpq_mpoly, poly2.fmpq_mpoly, context);
+}
+
+void crel_mpoly::sub(const crel_mpoly &poly2) {
+    fmpq_mpoly_sub(fmpq_mpoly, fmpq_mpoly, poly2.fmpq_mpoly, context);
 }
 
 
 void crel_mpoly::multiply(const crel_mpoly& poly2) {
-    fmpz_mpoly_mul(fmpz_mpoly, fmpz_mpoly, poly2.fmpz_mpoly, context);
+    fmpq_mpoly_mul(fmpq_mpoly, fmpq_mpoly, poly2.fmpq_mpoly, context);
+
+}
+
+void crel_mpoly::multiply(const long constant) {
+    fmpq_mpoly_scalar_mul_si(fmpq_mpoly, fmpq_mpoly, constant, context);
+}
+
+void crel_mpoly::divideby(const long constant) {
+    fmpq_mpoly_scalar_div_si(fmpq_mpoly, fmpq_mpoly, constant, context);
 
 }
 
 void crel_mpoly::divideby(const crel_mpoly &poly2) {
-    fmpz_mpoly_div_monagan_pearce(fmpz_mpoly, fmpz_mpoly, poly2.fmpz_mpoly, context);
+
+    bool isConstant = fmpq_mpoly_is_fmpq(poly2.fmpq_mpoly, context);
+
+    if (isConstant) {
+        // GEt the constant
+        fmpq_t constant;
+        fmpq_mpoly_get_fmpq(constant, poly2.fmpq_mpoly, context);
+
+        fmpq_mpoly_scalar_div_fmpq(fmpq_mpoly, fmpq_mpoly, constant, context);
+
+    } else {
+        // Check if the division is not exact. 3X2 / x2 isExact. 3x2 / x1 is not
+        fmpq_mpoly_t fmpq_mpoly_result{}; fmpq_mpoly_init(fmpq_mpoly_result, context);
+        int isExact = fmpq_mpoly_divides(fmpq_mpoly_result, fmpq_mpoly, poly2.fmpq_mpoly, context);
+
+        if (isExact>0) {
+            // Set the result to this polynomial
+            fmpq_mpoly_set(fmpq_mpoly, fmpq_mpoly_result, context);
+
+        } else {
+
+            // Here we are sure that the qotient will be 0and the remainder will be fmpq_mpoly.
+            // Because flintlib support only integer polynomials this is a limitation
+            // we just don't do anything let the result equals to fmpq_mpoly
+        }
+    }
+
 }
 
+void crel_mpoly::setVarCoeff(const uint32_t varIndex, const int nominator) {
+    setVarCoeff(varIndex, nominator, 1);
+}
 
-void crel_mpoly::setVarCoeff(const uint32_t varIndex, const int coeff) {
+void crel_mpoly::setVarCoeff(const uint32_t varIndex, const int nominator, const int denominator) {
+
+    // Create fmpq rational coefficient
+    fmpq_t coefficient;
+    fmpq_set_si(coefficient, nominator, denominator);
+
     // prepare the exp vector
     std::vector<ulong> expVector(num_vars);
     for (uint32_t i=0; i<num_vars; i++)
@@ -153,35 +200,39 @@ void crel_mpoly::setVarCoeff(const uint32_t varIndex, const int coeff) {
             expVector[i] = 0;
 
     // Set the coefficient of the monomial with exponent vector exp to c.
-    fmpz_mpoly_set_coeff_si_ui(fmpz_mpoly, coeff, &expVector[0], context);
+    fmpq_mpoly_set_coeff_fmpq_ui(fmpq_mpoly, coefficient, &expVector[0], context);
+
 }
 
 void crel_mpoly::maxjoin(const crel_mpoly &poly2) {
 
     // Loop through the polynomial terms
-    auto numTerms1 = fmpz_mpoly_length(fmpz_mpoly, context);
-    auto numTerms2 = fmpz_mpoly_length(poly2.fmpz_mpoly, context);
+    auto numTerms1 = fmpq_mpoly_length(fmpq_mpoly, context);
+    auto numTerms2 = fmpq_mpoly_length(poly2.fmpq_mpoly, context);
 
     // We pick a term of poly2 and then get its index vector and check if we have it in result poly
     for (int j=0; j<numTerms2; j++) {
         std::vector<ulong> expVector2(num_vars);
-        fmpz_mpoly_get_term_exp_ui(&expVector2[0], poly2.fmpz_mpoly, j, context);
-        auto coeff2 = fmpz_mpoly_get_term_coeff_si(poly2.fmpz_mpoly, j, context);
+        fmpq_mpoly_get_term_exp_ui(&expVector2[0], poly2.fmpq_mpoly, j, context);
+        fmpq_t coeff2;
+        fmpq_mpoly_get_term_coeff_fmpq(coeff2, poly2.fmpq_mpoly, j, context);
 
         // Loop through all terms of poly1 and check if we have a match of the vector index
         bool term2NotFound = true;
+        int term2ExpIndex = j;
         for (int i=0; i<numTerms1; i++) {
 
             std::vector<ulong> expVector1(num_vars);
-            fmpz_mpoly_get_term_exp_ui(&expVector1[0], fmpz_mpoly, i, context);
-            auto coeff1 = fmpz_mpoly_get_term_coeff_si(fmpz_mpoly, i, context);
+            fmpq_mpoly_get_term_exp_ui(&expVector1[0], fmpq_mpoly, i, context);
+            fmpq_t coeff1;
+            fmpq_mpoly_get_term_coeff_fmpq(coeff1, fmpq_mpoly, i, context);
 
             // check if the exp vectors are equal
             if (std::equal(expVector2.begin(), expVector2.begin() + num_vars, expVector1.begin())) {
 
                 // update the coeffcient if coeff2 is > than coeff1
-                if (coeff2 > coeff1) {
-                    fmpz_mpoly_set_term_coeff_si(fmpz_mpoly, i, coeff2, context);
+                if (fmpq_cmp(coeff2, coeff1) > 0) {
+                    fmpq_mpoly_set_term_coeff_fmpq(fmpq_mpoly, i, coeff2, context);
                 }
                 // Set that this term was found
                 term2NotFound = false;
@@ -191,10 +242,37 @@ void crel_mpoly::maxjoin(const crel_mpoly &poly2) {
 
         // If we didn't find the term add it to the final result
         if (term2NotFound) {
-            fmpz_mpoly_push_term_si_ui(fmpz_mpoly, coeff2, &expVector2[0], context);
+            //std::vector<ulong> expVector1(num_vars);
+            //fmpq_mpoly_get_term_exp_ui(&expVector1[0], fmpq_mpoly, j, context);
+            fmpq_mpoly_push_term_fmpq_ui(fmpq_mpoly, coeff2, &expVector2[0], context);
         }
     }
 }
+
+bool crel_mpoly::isConstant() {
+    return fmpq_mpoly_is_fmpq(fmpq_mpoly, context);
+}
+
+long crel_mpoly::getConstantNominator() {
+    // Get the constant
+    fmpq_t constant;
+    fmpq_mpoly_get_fmpq(constant, fmpq_mpoly, context);
+
+    return constant->num;
+}
+
+long crel_mpoly::getConstantDenominator() {
+    // Get the constant
+    fmpq_t constant;
+    fmpq_mpoly_get_fmpq(constant, fmpq_mpoly, context);
+
+    return constant->den;
+}
+
+
+
+
+
 
 
 
