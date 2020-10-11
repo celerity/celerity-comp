@@ -57,8 +57,8 @@ int celerity::extract_crels(celerity::crel_feature_set *fs,
     // Assumes clang exists in PATH and points to latest eg: clang10
     // -O0 : doesn't inline non-kernel functions which is required by our tool
     // -O3: does also loop unrolling not good when we are testing loop analysis
-    std::string bc_comp_command = "clang-10 -c -x cl -emit-llvm -cl-std=CL1.1 -Xclang -finclude-default-header -O3 -target amdgcn-amd " + extraClangArgs + " -foptimization-record-file=" + opts_FileName + " " + clFileInput + " -o " + noopt_bcFileName;
-    std::string opt_comp_command = "opt-10 --loop-simplify --adce --always-inline --amdgpu-always-inline --strip-dead-prototypes " + noopt_bcFileName + " -o " + bcFileName;
+    std::string bc_comp_command = "clang-10 -c -x cl -emit-llvm -cl-std=CL1.1 -Xclang -finclude-default-header -O1 -target amdgcn-amd " + extraClangArgs + " -foptimization-record-file=" + opts_FileName + " " + clFileInput + " -o " + noopt_bcFileName;
+    std::string opt_comp_command = "opt-10 --mem2reg --loop-simplify --indvars --lcssa --adce --always-inline --amdgpu-always-inline --strip-dead-prototypes " + noopt_bcFileName + " -o " + bcFileName;
     // Disassembly for debugging
     std::string ll_noopt_comp_command = "llvm-dis-10 " + noopt_bcFileName + " -o " + noopt_llFileName;
     std::string ll_opt_comp_command   = "llvm-dis-10 " + bcFileName + " -o " + llFileName;
@@ -127,16 +127,13 @@ int celerity::extract_crels(celerity::crel_feature_set *fs,
 
 
     // Delete all generated files
-    //if (!verbose) {
+    if (!verbose) {
         if( remove(opts_FileName.c_str()) != 0 ) perror( "Error deleting file" );
         if( remove(noopt_bcFileName.c_str()) != 0 ) perror( "Error deleting file" );
         if( remove(noopt_llFileName.c_str()) != 0 ) perror( "Error deleting file" );
         if( remove(bcFileName.c_str()) != 0 ) perror( "Error deleting file" );
         if( remove(llFileName.c_str()) != 0 ) perror( "Error deleting file" );
-    //}
-
-    //the pass manager does these two deallocations:
-    //delete fe; delete loop_analysis;
+    }
 
     return 0;
 }

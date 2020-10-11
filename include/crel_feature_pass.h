@@ -63,7 +63,8 @@ public:
     virtual void eval_function(llvm::Function &fun);
 
 private:
-    crel_mpoly evaluateSCEV(llvm::ScalarEvolution &SE, const crel_kernel &kernel, crel_mpoly &poly, const llvm::SCEV *scev);
+    crel_mpoly evaluateValue(const crel_kernel &kernel, llvm::Value *value);
+    crel_mpoly evaluateSCEV(llvm::ScalarEvolution &SE, const crel_kernel &kernel, const llvm::Loop &loop, crel_mpoly &poly, const llvm::SCEV *scev);
 };
 
 
