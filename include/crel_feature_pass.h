@@ -63,6 +63,7 @@ public:
     virtual void eval_function(llvm::Function &fun);
 
 private:
+    void ajust_coalesced(const crel_kernel &kernel, llvm::ScalarEvolution &SE, llvm::LoopInfo &LI);
     crel_mpoly evaluateValue(const crel_kernel &kernel, llvm::Value *value);
     crel_mpoly evaluateSCEV(llvm::ScalarEvolution &SE, const crel_kernel &kernel, const llvm::Loop &loop, crel_mpoly &poly, const llvm::SCEV *scev);
 };

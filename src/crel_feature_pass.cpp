@@ -116,10 +116,15 @@ void poly_crel_pass::eval_function(Function &func) {
         }
     }
 
-    // 2. We identify all loops and for each loop, we initialize it's the mpoly multiplier to 1
+    // Run the loop and SCEV passes
     LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>(func).getLoopInfo();
     ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>(func).getSE();
 
+    // 1.1 here we do a quick implementation of coalesced accesses. We did it here and not in
+    // feature set because we need SCEV to be run to determine Array indices based on induction variables
+    ajust_coalesced(kernel, SE, LI);
+
+    // 2. We identify all loops and for each loop, we initialize it's the mpoly multiplier to 1
     for (const Loop *toplevelLoop : LI) {
         // This call gets all nested loops within this toplevel loop
         for (const Loop *nestedLoop : toplevelLoop->getLoopsInPreorder()) {
@@ -221,10 +226,7 @@ void poly_crel_pass::eval_function(Function &func) {
 
         // The final mpoly of this featue is the inputSet[&bb] of the basic block
         featureSet->kernels[name].features[feat_name] = inputSet[&func.getEntryBlock()];
-
     }
-
-
 
     // Debug printing
     if (debug) {
@@ -406,7 +408,7 @@ crel_mpoly poly_crel_pass::evaluateValue(const crel_kernel &kernel, llvm::Value 
     }
 
     // If we reach here, means that SCEV variable was not part of the kernel variables
-    cerr << "ERROR: in kernel: "<< kernel.name << " encountered a SCEV that uses an un-supoorted variable: ";
+    cerr << "WARNING: in kernel: "<< kernel.name << " encountered a SCEV that uses an un-supoorted variable: ";
     scevValue->print(llvm::errs());
     cerr << endl;
 
@@ -501,14 +503,27 @@ crel_mpoly poly_crel_pass::evaluateSCEV(ScalarEvolution &SE, const crel_kernel &
         }
 
     } else if (scev->getSCEVType() == scCouldNotCompute)  {
-        cerr << "WARNINIG: could not compute SCEV for loop " << loop.getLoopID() << " ";
-        loop.print(llvm::errs());
-        cerr << "in kernel: " << kernel.name << ". --> Returning a UNIT multiplier for this loop" << endl;
 
-        // Return unit mpoly for this loop
-        auto constPoly = make_unique<crel_mpoly>(kernel.runtime_vars.size());
-        constPoly->setConstant(1);
-        return *constPoly;
+        // Create default unit mpoly for this loop
+        auto unitPoly = make_unique<crel_mpoly>(kernel.runtime_vars.size());
+        unitPoly->setConstant(1);
+
+        // In this case we try approximate to the max backedge count if found
+        auto maxBackedgeCount = SE.getConstantMaxBackedgeTakenCount(&loop);
+
+        if (maxBackedgeCount->getSCEVType() == scConstant) {
+            auto maxCountPoly = evaluateSCEV(SE, kernel, loop, *unitPoly, maxBackedgeCount);
+            cerr << "WARNINIG: could not compute SCEV for loop " << loop.getLoopID() << " ";
+            loop.print(llvm::errs());
+            cerr << "in kernel: " << kernel.name << ". --> Returning a MAX backedge count for this loop:" << maxCountPoly.getConstantNominator() <<endl;
+            return maxCountPoly;
+
+        } else {
+            cerr << "WARNINIG: could not compute SCEV for loop " << loop.getLoopID() << " ";
+            loop.print(llvm::errs());
+            cerr << "in kernel: " << kernel.name << ". --> Returning a UNIT multiplier for this loop" << endl;
+            return *unitPoly;
+        }
 
     } else if (scev->getSCEVType() == scAddRecExpr) {
         cerr << "WARNINIG: could not compute AddRecExpr SCEV for kernel " << kernel.name << endl;
@@ -517,4 +532,74 @@ crel_mpoly poly_crel_pass::evaluateSCEV(ScalarEvolution &SE, const crel_kernel &
     // Always return poly
     return poly;
 }
+
+
+/**
+ * Quicl implementation of coalesced
+ */
+bool isCoalescedAccess(const GetElementPtrInst *gi, ScalarEvolution &SE) {
+
+    // It very hard to determine coalesced accesses but here we just implement an approximation
+    // Make sure we are dealing with global memory
+    if (get_cl_address_space_type(gi->getPointerAddressSpace()) == cl_address_space_type::Global) {
+
+        // Make sure we have 1 index i.e num operands is always 1 plus
+        if (gi->getNumOperands() == 2) {
+            auto indexValue = gi->getOperand(1);
+            // Get the scev for this indexVale
+            auto scev = SE.getSCEV(indexValue);
+
+            // If the value is a constant assume it is coalesced
+            if (const auto *constExpr = dyn_cast<llvm::ConstantInt>(indexValue)) {
+                return true;
+
+                // If the value is dependent on an integer type assume is coalesced
+            } else if (auto *scevAddrec = dyn_cast<llvm::SCEVAddRecExpr>(scev)) {
+                // Get the step for this recurence
+                auto step = scevAddrec->getStepRecurrence(SE);
+
+                // If it is a constant = 1 return true
+                if (const auto *constScev = dyn_cast<SCEVConstant>(step) ) {
+                    if(constScev->getValue()->getValue().getZExtValue() <= 1)
+                        return true;
+                }
+            }
+        }
+    }
+    // By default return not coalesced
+    return false;
+}
+
+void poly_crel_pass::ajust_coalesced(const crel_kernel &kernel, ScalarEvolution &SE, LoopInfo &LI) {
+
+    // Go through all instructions of thi BasicBlock
+
+    for (BasicBlock &bb : kernel.function->getBasicBlockList()) {
+
+        for (Instruction &inst : bb) {
+
+            // Coalesced load and stores can share same getelementptr
+            if (auto *li = dyn_cast<LoadInst>(&inst)) {
+                auto pointOperand = li->getPointerOperand();
+
+                if (const auto *gi = dyn_cast<GetElementPtrInst>(pointOperand)) {
+                    // Add 1 to the coalesced poly of this block
+                    if (isCoalescedAccess(gi, SE))
+                        featureSet->kernels[kernel.name].bbFeatures[&bb]["coalesced"].add(1);
+                }
+            }
+
+            // Coalesced stores and stores can share same getelementptr
+            if (auto *si = dyn_cast<StoreInst>(&inst)) {
+                auto pointOperand = si->getOperand(1);
+                if (const auto *gi = dyn_cast<GetElementPtrInst>(pointOperand)) {
+                    // Add 1 to the coalesced poly of this block
+                    if (isCoalescedAccess(gi, SE))
+                        featureSet->kernels[kernel.name].bbFeatures[&bb]["coalesced"].add(1);
+                }
+            }
+        }
+    }
+}
+
 

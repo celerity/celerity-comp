@@ -100,7 +100,7 @@ const set<string> AGGREGATE = {"extractvalue","insertvalue"};
 // Bins used by Grewe featureset
 // getelementptr performs address calculation only and be considered a comp instruction
 // ‘fsub‘ instruction is used to represent the ‘fneg‘ instruction present in most other intermediate representations.
-const set<string> COMP_SET = {"getelementptr", "add","fadd", "sub", "fsub", "fneg", "mul", "fmul", "udiv", "sdiv", "fdiv", "urem", "srem", "frem"};//rem- remainder of a division by...
+const set<string> COMP_SET = {"add","fadd", "sub", "fsub", "fneg", "mul", "fmul", "udiv", "sdiv", "fdiv", "urem", "srem", "frem"};//rem- remainder of a division by...
 const set<string> COMP_INTINSICS = {"llvm.fmuladd",  "llvm.canonicalize",
                                     "llvm.smul.fix.sat", "‘llvm.umul.fix", "llvm.smul.fix",
                                     "llvm.sqrt", "llvm.powi", "llvm.sin", "llvm.cos", "llvm.pow", "llvm.exp", "llvm.exp2",
@@ -216,23 +216,24 @@ string poly_grewe11_feature_set::eval_instruction(const llvm::Instruction &inst)
     // localmem are local load & stores
     if (auto *li = dyn_cast<LoadInst>(&inst)) {
         if (get_cl_address_space_type(li->getPointerAddressSpace()) == cl_address_space_type::Constant ||
-                get_cl_address_space_type(li->getPointerAddressSpace()) == cl_address_space_type::Global) {
+            get_cl_address_space_type(li->getPointerAddressSpace()) == cl_address_space_type::Global) {
             return "mem";
         } else if (get_cl_address_space_type(li->getPointerAddressSpace()) == cl_address_space_type::Local) {
             return "localmem";
         }
     } else if (auto *si = dyn_cast<StoreInst>(&inst)) {
         if (get_cl_address_space_type(si->getPointerAddressSpace()) == cl_address_space_type::Constant ||
-                get_cl_address_space_type(si->getPointerAddressSpace()) == cl_address_space_type::Global) {
+            get_cl_address_space_type(si->getPointerAddressSpace()) == cl_address_space_type::Global) {
             return "mem";
         } else if (get_cl_address_space_type(si->getPointerAddressSpace()) == cl_address_space_type::Local) {
             return "localmem";
         }
-    // Comp instr
+
+        // Comp instr
     } else if (instr_check(COMP_SET, i_name) || instr_check(BITWISE, i_name)) {
         return "comp";
 
-    // Compare instr
+        // Compare instr
     } else if (instr_check(RATIONAL_SET, i_name)) {
         return "rational";
 
@@ -240,21 +241,22 @@ string poly_grewe11_feature_set::eval_instruction(const llvm::Instruction &inst)
     } else if (instr_check(ATOMIC_SET, i_name)) {
         return "atomic";
 
-    // We need to also handle llvm intrinsic functions
+        // We need to also handle llvm intrinsic functions
     } else if (instr_check(IGNORE_SET, i_name)) {
         return "";
 
-    // Handling functions call
+        // Handling functions call
     } else if (const CallInst *ci = dyn_cast<CallInst>(&inst)) {
 
         // Check if this is an intrinsic call
-        if ( ci->getIntrinsicID() != Intrinsic::not_intrinsic) {
+        if (ci->getIntrinsicID() != Intrinsic::not_intrinsic) {
             // Count this intrinsic as a comp instruction if it belongs the COMP_INTINSICS set
             if (instr_check(COMP_INTINSICS, Intrinsic::getName(ci->getIntrinsicID()).str())) {
                 //std::cout << "intrinsic call --> " << inst.getFunction()->getGlobalIdentifier() << " " << Intrinsic::getName(ci->getIntrinsicID()).str() << endl;
                 return "comp";
+            } else {
+                return "";
             }
-
         } else {
             // handling function calls
             llvm::Function *func = ci->getCalledFunction();
@@ -270,25 +272,22 @@ string poly_grewe11_feature_set::eval_instruction(const llvm::Instruction &inst)
             std::size_t found_get_group_id = calledFuncName.find("get_group_id");
 
             // If any of these calls was found
-            if (found_barrier!=std::string::npos || found_get_global_id!=std::string::npos || found_get_local_id!=std::string::npos ||
-                found_get_global_size!=std::string::npos || found_get_local_size!=std::string::npos ||
-                found_get_num_groups!=std::string::npos || found_get_group_id!=std::string::npos) {
+            if (found_barrier != std::string::npos || found_get_global_id != std::string::npos ||
+                found_get_local_id != std::string::npos ||
+                found_get_global_size != std::string::npos || found_get_local_size != std::string::npos ||
+                found_get_num_groups != std::string::npos || found_get_group_id != std::string::npos) {
                 //std::cout << "found get_global_id function call --> " << inst.getFunction()->getGlobalIdentifier() << " " << func->getGlobalIdentifier() << endl;
-
+                return "";
             } else if (is_cl_khr_base_atomics(calledFuncName) || is_cl_builtin_atomics(calledFuncName)) {
                 return "atomic";
             } else if (is_cl_builtin_math_func(calledFuncName)) {
                 return "comp";
             } else {
-                std::cerr << "WARNINIG: found non-kernel function call --> " << inst.getFunction()->getGlobalIdentifier() << " " << func->getGlobalIdentifier() << endl;
+                std::cerr << "WARNINIG: found non-kernel function call --> "
+                          << inst.getFunction()->getGlobalIdentifier() << " " << func->getGlobalIdentifier() << endl;
+                return "";
             }
-
         }
-        // By default return nothing
-        return "";
-
-    } else {
-        return i_name;
     }
 
     // By default return nothing
