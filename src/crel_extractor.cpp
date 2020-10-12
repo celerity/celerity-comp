@@ -127,13 +127,13 @@ int celerity::extract_crels(celerity::crel_feature_set *fs,
 
 
     // Delete all generated files
-    if (!verbose) {
+    //if (!verbose) {
         if( remove(opts_FileName.c_str()) != 0 ) perror( "Error deleting file" );
         if( remove(noopt_bcFileName.c_str()) != 0 ) perror( "Error deleting file" );
         if( remove(noopt_llFileName.c_str()) != 0 ) perror( "Error deleting file" );
         if( remove(bcFileName.c_str()) != 0 ) perror( "Error deleting file" );
         if( remove(llFileName.c_str()) != 0 ) perror( "Error deleting file" );
-    }
+    //}
 
     return 0;
 }
