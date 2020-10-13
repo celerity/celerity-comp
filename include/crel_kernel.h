@@ -48,6 +48,7 @@ namespace celerity {
         void add (llvm::BasicBlock* bb, const string &feature_name, const crel_mpoly &poly2);
 
         std::vector<string> getVarNames();
+        bool hasRuntimeVar(string varName);
 
 
         llvm::Function* function{}; // reference to the llvm function

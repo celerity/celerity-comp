@@ -56,27 +56,33 @@ crel_kernel::crel_kernel(llvm::Function* function) : function(function), instruc
                     // Add to runtime variables
                     if (found_get_global_id!=std::string::npos) {
                         crel_variable var = { "gi"+to_string(argConstantInt), ciValue, argConstantInt, false};
-                        runtime_vars.push_back(var);
+                        if (!hasRuntimeVar(var.name))
+                            runtime_vars.push_back(var);
 
                     } else if (found_get_local_id!=std::string::npos) {
                         crel_variable var = { "li"+to_string(argConstantInt), ciValue, argConstantInt, false};
-                        runtime_vars.push_back(var);
+                        if (!hasRuntimeVar(var.name))
+                            runtime_vars.push_back(var);
 
                     } else if (found_get_global_size!=std::string::npos) {
                         crel_variable var = { "gs"+to_string(argConstantInt), ciValue, argConstantInt, false};
-                        runtime_vars.push_back(var);
+                        if (!hasRuntimeVar(var.name))
+                            runtime_vars.push_back(var);
 
                     } else if (found_get_local_size!=std::string::npos) {
                         crel_variable var = { "ls"+to_string(argConstantInt), ciValue, argConstantInt, false};
-                        runtime_vars.push_back(var);
+                        if (!hasRuntimeVar(var.name))
+                            runtime_vars.push_back(var);
 
                     } else if (found_get_num_groups!=std::string::npos) {
                         crel_variable var = { "ng"+to_string(argConstantInt), ciValue, argConstantInt, false};
-                        runtime_vars.push_back(var);
+                        if (!hasRuntimeVar(var.name))
+                            runtime_vars.push_back(var);
 
                     } else if (found_get_group_id!=std::string::npos) {
                         crel_variable var = { "gr"+to_string(argConstantInt), ciValue, argConstantInt, false};
-                        runtime_vars.push_back(var);
+                        if (!hasRuntimeVar(var.name))
+                            runtime_vars.push_back(var);
                     }
                 }
 
@@ -113,4 +119,11 @@ vector<string> crel_kernel::getVarNames() {
         runtime_vars_names.push_back(runtime_var.name);
 
     return runtime_vars_names;
+}
+
+bool crel_kernel::hasRuntimeVar(string varName) {
+    for (auto var : runtime_vars) {
+        if (var.name == varName) return true;
+    }
+    return false;
 }
