@@ -515,7 +515,7 @@ crel_mpoly poly_crel_pass::evaluateSCEV(ScalarEvolution &SE, const crel_kernel &
             auto maxCountPoly = evaluateSCEV(SE, kernel, loop, *unitPoly, maxBackedgeCount);
             cerr << "WARNINIG: could not compute SCEV for loop " << loop.getLoopID() << " ";
             loop.print(llvm::errs());
-            if (maxCountPoly.getConstantNominator() > 0) {
+            if (maxCountPoly.getConstantNominator() > 0 && maxCountPoly.getConstantNominator() < 1000) {
                 cerr << "in kernel: " << kernel.name << ". --> Returning a MAX backedge count for this loop:"
                      << maxCountPoly.getConstantNominator() << endl;
                 return maxCountPoly;
