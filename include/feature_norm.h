@@ -13,7 +13,7 @@ enum class feature_norm {
 
 // TODO TOFIX XXX so far only simple linear normalization is implemented	             
 inline 
-void normalize(feature_set &fs){ 
+void normalize(FeatureSet &fs){ 
     for (const auto& kv : fs.raw) {
         llvm::Function *func = kv.first;
         float instructionContribution = 1.0f / float(fs.instructionTotContrib[func]);

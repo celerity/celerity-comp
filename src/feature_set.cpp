@@ -1,7 +1,6 @@
 #include <fstream>
 #include <string>
 
-
 #include <llvm/Support/MemoryBuffer.h>
 
 #include "feature_set.h"
@@ -11,7 +10,7 @@ using namespace celerity;
 using namespace llvm;
 using namespace std;
 
-void feature_set::print(ostream &os){
+void FeatureSet::print(ostream &os){
     for (const auto& kv : raw) {
         Function *func = kv.first;
         if (!raw[func].empty()) {
@@ -37,11 +36,11 @@ void feature_set::print(ostream &os){
     }
 }
 
-void feature_set::print_to_cout(){
-    feature_set::print(cout);
+void FeatureSet::print_to_cout(){
+    FeatureSet::print(cout);
 }
 
-void feature_set::print_to_file(const string &out_file){
+void FeatureSet::print_to_file(const string &out_file){
 	cout << "Writing to file: " << out_file << endl;
 	ofstream outstream;
 	outstream.open (out_file);
@@ -49,11 +48,11 @@ void feature_set::print_to_file(const string &out_file){
 	outstream.close();
 }
 
-void feature_set::normalize(){
+void FeatureSet::normalize(){
 	celerity::normalize(*this);
 }
 
-string feature_set::get_type_prefix(const llvm::Instruction &inst) {
+string FeatureSet::get_type_prefix(const llvm::Instruction &inst) {
     Type *t = inst.getType();
     if (t->isHalfTy()) {
         return "f16.";
@@ -87,7 +86,7 @@ static inline bool instr_check(const set<string> &instr_set, const string &instr
     return instr_set.find(instr_name) != instr_set.end();
 }
 
-string gpu_feature_set::eval_instruction(const llvm::Instruction &inst, int contribution){
+string Fan19FeatureSet::eval_instruction(const llvm::Instruction &inst, int contribution){
     string i_name = inst.getOpcodeName();
     if(instr_check(BIN_OPS,i_name)) {        
         if(instr_check(INT_ADDSUB, i_name)){
@@ -142,7 +141,7 @@ string gpu_feature_set::eval_instruction(const llvm::Instruction &inst, int cont
     return "other";
 }
 
-string full_feature_set::eval_instruction(const llvm::Instruction &inst, int contribution){    
+string FullFeatureSet::eval_instruction(const llvm::Instruction &inst, int contribution){    
     string i_name = inst.getOpcodeName();
     if(instr_check(BIN_OPS,i_name)) {
         return get_type_prefix(inst) + i_name;
@@ -150,7 +149,7 @@ string full_feature_set::eval_instruction(const llvm::Instruction &inst, int con
     return i_name;
 }
 
-string grewe11_feature_set::eval_instruction(const llvm::Instruction &inst, int contribution){
+string Grewe11FeatureSet::eval_instruction(const llvm::Instruction &inst, int contribution){
     // TODO FIXME XXX Nadjib
     // implementation missing
     return "";

@@ -19,25 +19,25 @@ using namespace std;
 
 
 // Initialization of a static member
-char feature_pass::ID = 0;
-char kofler13_pass::ID = 0;
+char FeaturePass::ID = 0;
+char Kofler13Pass::ID = 0;
 
-void feature_pass::eval_BB(BasicBlock &bb){
+void FeaturePass::eval_BB(BasicBlock &bb){
     for(Instruction &i : bb){
         features->eval(i);
     }
 }	
 
-void feature_pass::eval_function(Function &fun){
+void FeaturePass::eval_function(Function &fun){
     for (llvm::BasicBlock &bb : fun) 
     eval_BB(bb);
 }
 
-void feature_pass::finalize(){
+void FeaturePass::finalize(){
     normalize(*features);
 }
 
-bool feature_pass::runOnModule(Module& m) {
+bool FeaturePass::runOnModule(Module& m) {
     CallGraph &CG = getAnalysis<CallGraphWrapperPass>().getCallGraph();
   
     // Walk the callgraph in bottom-up SCC order.
@@ -56,7 +56,7 @@ bool feature_pass::runOnModule(Module& m) {
     return false;
 }
 
-bool feature_pass::runOnSCC(CallGraphSCC &SCC) {
+bool FeaturePass::runOnSCC(CallGraphSCC &SCC) {
     for (auto &cgnode : SCC) {
         Function *func = cgnode->getFunction();
         if (func) {
@@ -70,7 +70,7 @@ bool feature_pass::runOnSCC(CallGraphSCC &SCC) {
 }
 
 
-void kofler13_pass::getAnalysisUsage(AnalysisUsage &AU) const {
+void Kofler13Pass::getAnalysisUsage(AnalysisUsage &AU) const {
     AU.setPreservesAll();
     AU.addRequired<CallGraphWrapperPass>();
     AU.addRequired<LoopInfoWrapperPass>();
@@ -81,7 +81,7 @@ void kofler13_pass::getAnalysisUsage(AnalysisUsage &AU) const {
  * Current limitations:
  *  - it only works on natual loops (nested loops may be missing)
  */
-void kofler13_pass::eval_function(Function &func) {
+void Kofler13Pass::eval_function(Function &func) {
     // Current implementation requires that the LoopInfoWrapperPass pass calculates the loop information, 
     // thus it should be ran before ofthis pass.    
     
@@ -130,9 +130,11 @@ void kofler13_pass::eval_function(Function &func) {
 }
 
 // Pass registration.
-
 // Old-style pass registration for <opt> (registering dynamically loaded passes).
-static RegisterPass<feature_pass> feature_eval_pass("feature-pass", "Feature evaluation");
-static RegisterPass<kofler13_pass> kofler13_eval_pass("kofler13-pass", "Kofler13 feature evaluation");
-//static RegisterPass<costrelation_eval> cr_eval_pass("costrelation_eval", "Cost relation feature evaluation");
+//static RegisterPass<FeaturePass> feature_eval_pass("feature-pass", "Feature extraction");
+//static RegisterPass<Kofler13Pass> kofler13_eval_pass("kofler13-pass", "Kofler et al. ICS 13 feature extraction");
+//static RegisterPass<PolFeatPass> polfeat_pass("polfeat-pass", "Feature extraction with polynomial feature");
 
+static RegisterPass<FeaturePass> DefaultFP("feature-pass", "Default feature extraction pass",  false /* Only looks at CFG */,  false /* Analysis Pass */);
+static RegisterPass<Kofler13Pass> Kofler13FP("kofler13-pass", "Feature extraction pass based on [Kofler et al., ICS'13]",  false /* Only looks at CFG */,  false /* Analysis Pass */);
+//static RegisterPass<FeaturePass> FP("hello", "Hello World Pass",  false /* Only looks at CFG */,  false /* Analysis Pass */);

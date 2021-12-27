@@ -44,9 +44,9 @@ endif(EXTRACTOR_TOOL)
 add_library(feature_pass MODULE ${FEATURE_SRC} src/feature_pass.cpp)
 
 
-# Build the integratoin layer to be used with the Celerity runtime
+# Build the integration layer to be used with the Celerity runtime
 if(CELERITY_RUNTIME)
-  # Add kernel name pass  
+  # build a Celerity  kernel name pass  
   add_library(celerity_interface_pass SHARED src/celerity_interface_pass.cpp)
   target_compile_options(celerity_interface_pass PRIVATE -Wl,-znodelete) # workoaround to fix bug with llvm autoregistring passes
   if (LLVM IN_LIST LLVM_AVAILABLE_LIBS)
@@ -58,6 +58,7 @@ endif(CELERITY_RUNTIME)
 
 # Install example scripts (make install)
 if(SAMPLE_SCRIPTS)
+  make_directory("${CMAKE_BINARY_DIR}/samples")
   install(PROGRAMS "examples/features_from_OpenCL.sh" DESTINATION "${CMAKE_BINARY_DIR}" )
   install(PROGRAMS "examples/features_from_SYCL.sh" DESTINATION "${CMAKE_BINARY_DIR}" )
   install(FILES "examples/example-application-sycl.cpp"  DESTINATION "${CMAKE_BINARY_DIR}/samples" )
