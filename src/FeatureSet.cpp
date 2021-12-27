@@ -3,14 +3,22 @@
 
 #include <llvm/Support/MemoryBuffer.h>
 
-#include "feature_set.h"
-#include "feature_norm.h"
+#include "FeatureSet.hpp"
+#include "FeatureNormalization.hpp"
 
 using namespace celerity;
 using namespace llvm;
 using namespace std;
 
-void FeatureSet::print(ostream &os){
+void FeatureSet::print(llvm::raw_ostream &out_stream){
+    out_stream << "raw values\n";
+    print_feature<unsigned>(raw, out_stream);
+    out_stream << "feature values\n";
+    print_feature<float>(feat, out_stream);
+}
+
+/* this version handles different Function 
+void FeatureSet::print(llvm::raw_ostream &os)){
     for (const auto& kv : raw) {
         Function *func = kv.first;
         if (!raw[func].empty()) {
@@ -34,11 +42,8 @@ void FeatureSet::print(ostream &os){
             os << endl;
         }
     }
-}
+}*/
 
-void FeatureSet::print_to_cout(){
-    FeatureSet::print(cout);
-}
 
 void FeatureSet::print_to_file(const string &out_file){
 	cout << "Writing to file: " << out_file << endl;

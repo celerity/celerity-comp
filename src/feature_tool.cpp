@@ -17,8 +17,8 @@
 //#include <llvm/Analysis/ScalarEvolution.h>
 #include <llvm/Passes/PassBuilder.h>
 
-#include "feature_set.h"
-#include "feature_pass.h"
+#include "FeatureSet.hpp"
+#include "FeaturePass.hpp"
 
 using namespace std;
 using namespace llvm;

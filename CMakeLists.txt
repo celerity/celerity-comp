@@ -44,7 +44,7 @@ endif(EXTRACTOR_TOOL)
 #add_library(feature_eval MODULE ${FEATURE_SRC} src/feature_eval.cpp)
 #add_library(feature_pass MODULE ${FEATURE_SRC} src/feature_pass.cpp)
 #add_llvm_loadable_module(FeatureEvaluationPass feature_eval.cpp)
-add_library(feature_pass MODULE ${FEATURE_SRC} src/feature_pass.cpp)
+add_library(feature_pass MODULE ${FEATURE_SRC} src/FeaturePass.cpp)
 
 
 # Build the integration layer to be used with the Celerity runtime

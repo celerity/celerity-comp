@@ -4,38 +4,47 @@
 #include <llvm/Analysis/CallGraphSCCPass.h>
 #include <llvm/Analysis/ScalarEvolution.h>
 
-#include <llvm/Analysis/CallGraph.h>
-#include <llvm/ADT/SCCIterator.h>
+//#include <llvm/Analysis/CallGraph.h>
+//#include <llvm/ADT/SCCIterator.h>
 #include <llvm/IR/Module.h>
 #include <llvm/Pass.h>
 
-#include "FeaturePass.h"
-#include "FeatureNormalization.h"
+#include <llvm/Passes/PassBuilder.h>
+#include <llvm/Passes/PassPlugin.h>
+#include <llvm/Transforms/IPO/PassManagerBuilder.h>
+
+#include "FeaturePass.hpp"
+#include "FeatureNormalization.hpp"
 
 using namespace celerity;
 using namespace llvm;
 using namespace std;
 
 
-// Initialization of a static member
-char FeaturePass::ID = 0;
-char Kofler13Pass::ID = 0;
+llvm::AnalysisKey FeatureExtractionPass::Key;
 
-void FeaturePass::eval_BB(BasicBlock &bb){
+void FeatureExtractionPass::extract(BasicBlock &bb){
     for(Instruction &i : bb){
         features->eval(i);
     }
 }	
 
-void FeaturePass::eval_function(Function &fun){
+void FeatureExtractionPass::extract(Function &fun){
     for (llvm::BasicBlock &bb : fun) 
-    eval_BB(bb);
+        extract(bb);
 }
 
-void FeaturePass::finalize(){
+void FeatureExtractionPass::finalize(){
     normalize(*features);
 }
 
+FeatureExtractionPass::Result FeatureExtractionPass::run(llvm::Function &fun, llvm::FunctionAnalysisManager &fam){
+    extract(fun);
+    finalize();    
+    return features->getFeatureValues();
+}
+
+/*
 bool FeaturePass::runOnModule(Module& m) {
     CallGraph &CG = getAnalysis<CallGraphWrapperPass>().getCallGraph();
   
@@ -67,8 +76,17 @@ bool FeaturePass::runOnSCC(CallGraphSCC &SCC) {
     }
     return false;
 }
+*/
 
 
+llvm::PreservedAnalyses FeaturePrinterPass::run(llvm::Function &fun, llvm::FunctionAnalysisManager &fam){
+    auto &feature_set = fam.getResult<FeatureExtractionPass>(fun);
+    out_stream << "Printing analysis FeatureExtractionPass for function " << fun.getName() << "\n";
+    print_feature(feature_set, out_stream);
+    return PreservedAnalyses::all();
+}
+
+/*
 void Kofler13Pass::getAnalysisUsage(AnalysisUsage &AU) const {
     AU.setPreservesAll();
     AU.addRequired<CallGraphWrapperPass>();
@@ -80,15 +98,15 @@ void Kofler13Pass::getAnalysisUsage(AnalysisUsage &AU) const {
  * Current limitations:
  *  - it only works on natual loops (nested loops may be missing)
  */
-void Kofler13Pass::eval_function(Function &func) {
+void Kofler13ExtractionPass::extract(llvm::Function &fun) {
     // Current implementation requires that the LoopInfoWrapperPass pass calculates the loop information, 
     // thus it should be ran before ofthis pass.    
     
     // 1. for each BB, we initialize it's "loop multiplier" to 1
-    if (func.isDeclaration())
+    if (fun.isDeclaration())
         return;
     std::unordered_map<const llvm::BasicBlock *, int> multiplier;
-    for(const BasicBlock &bb : func.getBasicBlockList()){
+    for(const BasicBlock &bb : fun.getBasicBlockList()){
         multiplier[&bb] = 1;
     }	
 
@@ -130,8 +148,51 @@ void Kofler13Pass::eval_function(Function &func) {
 
 // Pass registration.
 // Old-style pass registration for <opt> (registering dynamically loaded passes).
-/static RegisterPass<FeaturePass> DefaultFP("feature-pass", "Default feature extraction pass",  false /* Only looks at CFG */,  false /* Analysis Pass */);
-static RegisterPass<Kofler13Pass> Kofler13FP("kofler13-pass", "Feature extraction pass based on [Kofler et al., ICS'13]",  false /* Only looks at CFG */,  false /* Analysis Pass */);
-//static RegisterPass<FeaturePass> FP("hello", "Hello World Pass",  false /* Only looks at CFG */,  false /* Analysis Pass */);
-// New-style pass registration
-//FUNCTION_PASS("helloworld", HelloWorldPass())
+//static RegisterPass<FeaturePass> DefaultFP("feature-pass", "Default feature extraction pass",  false /* Only looks at CFG */,  false /* Analysis Pass */);
+//static RegisterPass<Kofler13Pass> Kofler13FP("kofler13-pass", "Feature extraction pass based on [Kofler et al., ICS'13]",  false /* Only looks at CFG */,  false /* Analysis Pass */);
+
+/*
+llvm::PassPluginLibraryInfo getFeatureExtractionPassPluginInfo() {
+  return {
+    LLVM_PLUGIN_API_VERSION, "OpcodeCounter", LLVM_VERSION_STRING,
+        [](PassBuilder &PB) {
+          // #1 REGISTRATION FOR "opt -passes=print<opcode-counter>"
+          // Register OpcodeCounterPrinter so that it can be used when
+          // specifying pass pipelines with `-passes=`.
+          PB.registerPipelineParsingCallback(
+              [&](StringRef Name, FunctionPassManager &FPM,
+                  ArrayRef<PassBuilder::PipelineElement>) {
+                if (Name == "print<opcode-counter>") {
+                  FPM.addPass(OpcodeCounterPrinter(llvm::errs()));
+                  return true;
+                }
+                return false;
+              });
+          // #2 REGISTRATION FOR "-O{1|2|3|s}"
+          // Register OpcodeCounterPrinter as a step of an existing pipeline.
+          // The insertion point is specified by using the
+          // 'registerVectorizerStartEPCallback' callback. To be more precise,
+          // using this callback means that OpcodeCounterPrinter will be called
+          // whenever the vectoriser is used (i.e. when using '-O{1|2|3|s}'.
+          PB.registerVectorizerStartEPCallback(
+              [](llvm::FunctionPassManager &PM,
+                 llvm::PassBuilder::OptimizationLevel Level) {
+                PM.addPass(OpcodeCounterPrinter(llvm::errs()));
+              });
+          // #3 REGISTRATION FOR "FAM.getResult<OpcodeCounter>(Func)"
+          // Register OpcodeCounter as an analysis pass. This is required so that
+          // OpcodeCounterPrinter (or any other pass) can request the results
+          // of OpcodeCounter.
+          PB.registerAnalysisRegistrationCallback(
+              [](FunctionAnalysisManager &FAM) {
+                FAM.registerPass([&] { return OpcodeCounter(); });
+              });
+          }
+        };
+}
+
+extern "C" LLVM_ATTRIBUTE_WEAK ::llvm::PassPluginLibraryInfo
+llvmGetPassPluginInfo() {
+  return getOpcodeCounterPluginInfo();
+}
+*/
