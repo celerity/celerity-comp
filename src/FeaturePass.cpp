@@ -62,7 +62,7 @@ bool FeaturePass::runOnSCC(CallGraphSCC &SCC) {
         if (func) {
             //cout << "eval function: " << (func->hasName() ? func->getName().str() : "anonymous") << "\n";
             eval_function(*func);
-	    finalize();
+	        finalize();
             //features->print();
         }
     }
@@ -131,10 +131,8 @@ void Kofler13Pass::eval_function(Function &func) {
 
 // Pass registration.
 // Old-style pass registration for <opt> (registering dynamically loaded passes).
-//static RegisterPass<FeaturePass> feature_eval_pass("feature-pass", "Feature extraction");
-//static RegisterPass<Kofler13Pass> kofler13_eval_pass("kofler13-pass", "Kofler et al. ICS 13 feature extraction");
-//static RegisterPass<PolFeatPass> polfeat_pass("polfeat-pass", "Feature extraction with polynomial feature");
-
-static RegisterPass<FeaturePass> DefaultFP("feature-pass", "Default feature extraction pass",  false /* Only looks at CFG */,  false /* Analysis Pass */);
+/static RegisterPass<FeaturePass> DefaultFP("feature-pass", "Default feature extraction pass",  false /* Only looks at CFG */,  false /* Analysis Pass */);
 static RegisterPass<Kofler13Pass> Kofler13FP("kofler13-pass", "Feature extraction pass based on [Kofler et al., ICS'13]",  false /* Only looks at CFG */,  false /* Analysis Pass */);
 //static RegisterPass<FeaturePass> FP("hello", "Hello World Pass",  false /* Only looks at CFG */,  false /* Analysis Pass */);
+// New-style pass registration
+//FUNCTION_PASS("helloworld", HelloWorldPass())

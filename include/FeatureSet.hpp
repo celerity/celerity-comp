@@ -1,100 +1,86 @@
 #pragma once
-#include <string>
-#include <iostream>
-#include <set>
-#include <unordered_map>
 
-#include <llvm/IR/Instructions.h>
+#include <llvm/IR/PassManager.h>
+//#include <llvm/Pass.h>
+#include <llvm/IR/Function.h>
+#include <llvm/IR/Module.h>
+#include <llvm/IR/BasicBlock.h>
 
-using namespace std;
+#include <llvm/PassSupport.h>
+#include <llvm/PassRegistry.h>
+
+#include <llvm/Analysis/CallGraphSCCPass.h>
+#include <llvm/Analysis/CallGraph.h>
+#include <llvm/Analysis/LoopInfo.h>
+
+#include "FeatureSet.h"
+
+using namespace llvm;
 
 namespace celerity {
 
-
-// List of supported feature extraction techniques 
-enum class feature_set_mode { 	
-    GREWE11,    // Feature set used in [Grewe et al. CC 2011]. Few feautres mainly based on 
-    FAN19,      // Feature set based on specifically designed for GPU architecture.
-    //KOFLER13,   // Features based on the OpenCL langauge features (note: [Kofler et al.13] also had dynamic features).
-    FULL        // Extended feature representation: one feature for each LLVM IR type. Accurate but hard to cover.
+/* List of supported feature extraction techniques */
+enum class feature_pass_mode { 
+    NORMAL,     // Instruction features of each BB are summed up for the program.
+    KOFLER13,   // Instruction features of instructions inside loops have a larger contribution.
+    POLFEAT     // Instruction features are progated as polynomial cost relations . More accurate, but requires runtime evaluation.
 };
 
 
-// A set of feature, including both raw values and normalized ones. 
-class FeatureSet {
-public:
-    std::unordered_map<llvm::Function*, std::unordered_map<string,int>>   raw;  // raw features (instruction count)
-    std::unordered_map<llvm::Function*, std::unordered_map<string,float>> feat; // feature after normalization
-    std::unordered_map<llvm::Function*, int> instructionNum;
-    std::unordered_map<llvm::Function*, int> instructionTotContrib;
+/* 
+ * An LLVM function pass that extract static code features. 
+ * The extraction of features from a single instruction is delegated to a feature set class.
+ * In this basic implementation, BB's instruction contributions are summed up.
+ */
+class FeaturePass :  PassInfoMixin<FeaturePass> {
+//public llvm::ModulePass {
+ public:
+    static char ID;     
+    Fan19FeatureSet default_feature_set;
+    FeatureSet *features = &default_feature_set;
 
-    void add(llvm::Function* func, const string &feature_name, int contribution = 1){
-        int old = raw[func][feature_name];
-        raw[func][feature_name] = old + contribution;
-        instructionNum[func] += 1;
-        instructionTotContrib[func] += contribution;
-    }	
-    
-    void eval(llvm::Instruction &inst, int contribution = 1) {
-        llvm::Function *func = inst.getFunction();
-        // test if we need to do init
-        if (instructionNum.find(func) == instructionNum.end()) {
-            raw[func]  = unordered_map<string,int>();
-            feat[func] = unordered_map<string,float>();
-            instructionNum[func] = 0;
-            instructionTotContrib[func] = 0;
-        }
-        // handling function calls
-        if (llvm::CallInst *call = llvm::dyn_cast<llvm::CallInst>(&inst)) {
-	    if (func != call->getCalledFunction() && call->getCalledFunction()) {
-	        // ensure this is not a recursion, which is not supported
-		int currInstNum = instructionNum[func];
-                unordered_map<string, int> fraw = raw[call->getCalledFunction()];
-	        for (const auto& kv : fraw) {
-	            add(func, kv.first, kv.second);
-	        }
-		instructionNum[func] = currInstNum + instructionNum[call->getCalledFunction()];
-	    }
-        } else {
-            add(func, eval_instruction(inst), contribution);
-        }
+    virtual void setFeatureSet(FeatureSet &fs){
+        features = &fs;
+    }
+/*
+    FeaturePass() : llvm::ModulePass(ID) {        
+        features = &default_feature_set;        
     }
 
-    //virtual float get_feature(string &feature_name){ return feat[feature_name]; }
-    virtual void print(std::ostream& = std::cerr);
-    virtual void print_to_cout();
-    virtual void print_to_file(const string&);
-    virtual void normalize();
-    virtual ~FeatureSet(){}
-protected:
-    /* Abstract method that evaluates an llvm instruction in terms of feature representation. */
-    virtual string eval_instruction(const llvm::Instruction &inst, int contribution = 1) = 0;
-    virtual string get_type_prefix(const llvm::Instruction &inst);
+    FeaturePass(FeatureSet *fs) : llvm::ModulePass(ID) {
+        features = fs;
+    }
+    virtual ~FeaturePass() {}
+*/
+    virtual void eval_BB(llvm::BasicBlock &bb);	
+    virtual void eval_function(llvm::Function &fun);
+
+    /* Overrides LLVM CallGraphSCCPass method */
+    virtual bool runOnModule(llvm::Module &m);
+    virtual bool runOnSCC(llvm::CallGraphSCC &SCC);
+    virtual void getAnalysisUsage(llvm::AnalysisUsage &au) const {au.addRequired<llvm::CallGraphWrapperPass>();};
+    void finalize();
 };
 
 
-/* Feature set based on [Fan et al. ICPP 2019], specifically designed for GPU architecture. */
-class Fan19FeatureSet : public FeatureSet {
-    string eval_instruction(const llvm::Instruction &inst, int contribution = 1);    
+
+/*  
+ * An LLVM pass to extract features using [Kofler et al., 13] loop heuristics.
+ * The heuristic gives more important (x100) to the features inside a loop.
+ * It requires the loop analysis pass ("loops") to be executed before of that pass.
+ */
+class Kofler13Pass : public PassInfoMixin<Kofler13Pass> {
+ public:
+   static char ID; 
+/*   Kofler13Pass() : FeaturePass() {}
+    Kofler13Pass(FeatureSet *fs) : FeaturePass(fs) {}
+    virtual ~Kofler13Pass() {}
+*/
+    virtual void getAnalysisUsage(llvm::AnalysisUsage &info) const;
+    virtual void eval_function(llvm::Function &fun);
 };
 
-/* Feature set used by Grewe & O'Boyle. It is very generic and mainly designed to catch mem. vs comp. */
-class Grewe11FeatureSet : public FeatureSet {
-    string eval_instruction(const llvm::Instruction &inst, int contribution = 1);
-}; 
-
-/* Feature set used by Fan, designed for GPU architecture. */
-class FullFeatureSet : public FeatureSet {
-    string eval_instruction(const llvm::Instruction &inst, int contribution = 1);    
-};
-
-
-/* Memory address space identifiers, used for feature recognition. */
-const unsigned privateAddressSpace = 0;
-const unsigned localAddressSpace   = 1;
-const unsigned globalAddressSpace  = 2;
-enum class AddressSpaceType { Private, Local, Global, Unknown };
-AddressSpaceType checkAddrSpace(const unsigned addrSpaceId);
-
+//ExtractorFeaturePassRegister<FeaturePass>
+//ExtractorFeaturePassRegister<Kofler13Pass>
 
 } // end namespace celerity

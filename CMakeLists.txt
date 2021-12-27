@@ -26,9 +26,12 @@ option(CELERITY_RUNTIME "Install the integration layer for Celerity (requires ex
 # TODO: 3opts: only LLVM passes, only external tool, both
 
 # sources
-set(FEATURE_SRC src/feature_pass.cpp src/feature_set.cpp)
+set(FEATURE_SRC src/FeaturePass.cpp src/FeatureSet.cpp)
+if(POLFEAT)
+  set(FEATURE_SRC ${FEATURE_SRC} src/PolFeatPass.cpp)
+endif(POLFEAT)
 
-# Build the feature extraction tool 
+# build the feature extraction tool 
 if(EXTRACTOR_TOOL)
   add_executable(feature_ext ${FEATURE_SRC} src/feature_tool.cpp)
   llvm_map_components_to_libnames(llvm_libs support core irreader analysis)
@@ -59,11 +62,11 @@ endif(CELERITY_RUNTIME)
 # Install example scripts (make install)
 if(SAMPLE_SCRIPTS)
   make_directory("${CMAKE_BINARY_DIR}/samples")
-  install(PROGRAMS "examples/features_from_OpenCL.sh" DESTINATION "${CMAKE_BINARY_DIR}" )
-  install(PROGRAMS "examples/features_from_SYCL.sh" DESTINATION "${CMAKE_BINARY_DIR}" )
+  install(PROGRAMS "examples/features_from_OpenCL.sh"    DESTINATION "${CMAKE_BINARY_DIR}" )
+  install(PROGRAMS "examples/features_from_SYCL.sh"      DESTINATION "${CMAKE_BINARY_DIR}" )
   install(FILES "examples/example-application-sycl.cpp"  DESTINATION "${CMAKE_BINARY_DIR}/samples" )
-  install(FILES "examples/matrix-multiply-sycl.cpp"  DESTINATION "${CMAKE_BINARY_DIR}/samples" )
-  install(FILES "examples/simple-vector-add-sycl.cpp"  DESTINATION "${CMAKE_BINARY_DIR}/samples" )
-  install(FILES "examples/vector-add-CL.c"  DESTINATION "${CMAKE_BINARY_DIR}/samples" )
-  install(FILES "examples/vector-add-kernel.cl"  DESTINATION "${CMAKE_BINARY_DIR}/samples" )
+  install(FILES "examples/matrix-multiply-sycl.cpp"      DESTINATION "${CMAKE_BINARY_DIR}/samples" )
+  install(FILES "examples/simple-vector-add-sycl.cpp"    DESTINATION "${CMAKE_BINARY_DIR}/samples" )
+  install(FILES "examples/vector-add-CL.c"               DESTINATION "${CMAKE_BINARY_DIR}/samples" )
+  install(FILES "examples/vector-add-kernel.cl"          DESTINATION "${CMAKE_BINARY_DIR}/samples" )
 endif(SAMPLE_SCRIPTS)

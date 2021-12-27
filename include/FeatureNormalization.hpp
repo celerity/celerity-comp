@@ -1,5 +1,6 @@
 #pragma once
-#include "feature_set.h"
+
+#include "FeatureSet.h"
 
 namespace celerity {
 
