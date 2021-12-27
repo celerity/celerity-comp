@@ -9,9 +9,8 @@
 #include <llvm/IR/Module.h>
 #include <llvm/Pass.h>
 
-
-#include "feature_pass.h"
-#include "feature_norm.h"
+#include "FeaturePass.h"
+#include "FeatureNormalization.h"
 
 using namespace celerity;
 using namespace llvm;
