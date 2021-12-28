@@ -22,6 +22,7 @@
 
 using namespace std;
 using namespace llvm;
+using namespace celerity;
 
 
 llvm::Module *load_module(std::ifstream &stream);
@@ -78,6 +79,7 @@ int optimization_level = 1;
 
 // Standalone tool that extracts different features representations out of a LLVM-IR program. 
 int main(int argc, char* argv[]) {
+    celerity::FeatureSetRegistry registered_fs; // XXX TODO this should be a singleton
 
     ArgumentParser input(argc, argv);
     if(input.cmdOptionExists("-h")) {
@@ -94,41 +96,37 @@ int main(int argc, char* argv[]) {
         exit(1);
     }
 
-    // define a feature set   
+
+    // define a feature extraction technique
+    celerity::FeatureExtractionPass *fe;
+    string feat_eval_opt = input.getCmdOption("-fe");
+    if (!feat_eval_opt.empty()){                
+        // XXX TODO to be supported flags: {default|kofler|polfeat}
+        if(feat_eval_opt == "kofler13") {
+            fe = new celerity::Kofler13ExtractionPass();
+        //else if(feat_eval_opt =="cr")
+        //    fe = new celerity::costrelation_set(fs);
+        } else //if(feat_eval_opt == "default") 
+        {
+            fe = new celerity::FeatureExtractionPass();
+        }
+    }
+
+
+   // define a feature set   
     celerity::FeatureSet *fs;
     string feat_set_opt = input.getCmdOption("-fs");
     if (!feat_set_opt.empty()){  // supported flags: {gpu|grewe|full}        
-        if(feat_set_opt =="grewe11") 
-            fs = new celerity::Grewe11FeatureSet();
-        else if(feat_set_opt =="full")
-            fs = new celerity::FullFeatureSet();
-        else if(feat_set_opt =="fan19")
-            fs = new celerity::Fan19FeatureSet();
-    }
-    else {
-        // default, no command line flag
-        fs = new celerity::Fan19FeatureSet();
-        feat_set_opt = "fan19";
+        if(registered_fs.count(feat_set_opt)){ // returns 1 if is in the map, 0 oterhwise
+            fs = registered_fs[feat_set_opt];
+        } 
+        else {
+            fs = registered_fs["default"];
+        }
+        fe->setFeatureSet(feat_set_opt);
     }
 
-    // define a feature extraction technique
-    celerity::FeaturePass fe;
-//    celerity::FeaturePass *fe;
-    string feat_eval_opt = input.getCmdOption("-fe");
- /*   if (!feat_eval_opt.empty()){ // XXX TODO to be supported flags: {normal|kofler|polfeat}
-        if(feat_eval_opt == "kofler13") {
-            fe = new celerity::Kofler13Pass(fs);
-        //else if(feat_eval_opt =="cr")
-        //    fe = new celerity::costrelation_set(fs);
-        } else if(feat_eval_opt == "default") {
-            fe = new celerity::FeaturePass(fs);
-        }
-    } else {
-        // default, no command line flag
-        fe = new celerity::FeaturePass(fs);
-        feat_eval_opt = "default";
-    }
-*/
+
     if(verbose) cout << "feature-set: " << feat_set_opt << ", feature-evaluation-technique: " << feat_eval_opt << endl;
 
     if(verbose) cout << "loading module from file" << endl; 
@@ -179,16 +177,15 @@ int main(int argc, char* argv[]) {
 
     // final printing to either cout or file
     const string &outFile = input.getCmdOption("-o");
-    if (outFile.empty()){
-      // do nothing
-      // fs->print_to_cout(); 
+    if (outFile.empty()){       
+        print_feature<float>(fe->getFeatureSet()->feat, llvm::outs());
     }
     else {
-      fs->print_to_file(outFile);
+        // fs->print_to_file(outFile);
     }    
 
     //the pass manager does these two deallocations:
-    //delete fe; delete loop_analysis;
+    delete fe; // delete loop_analysis;
     //delete fs;
     return 0;
 } // end main

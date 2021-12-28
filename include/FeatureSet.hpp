@@ -2,9 +2,9 @@
 
 #include <string>
 #include <iostream>
-#include <set>
-#include <unordered_map>
-#include <map>
+//#include <set>
+//#include <unordered_map>
+//#include <map>
 
 #include <llvm/IR/Instructions.h>
 
@@ -90,9 +90,8 @@ public:
     */
 
     //virtual float get_feature(string &feature_name){ return feat[feature_name]; }
-    void print(llvm::raw_ostream &out_stream);
-    
-    void print_to_file(const string&);
+    void print(llvm::raw_ostream &out_stream);    
+    //void print_to_file(const string&);
     virtual void normalize();
     virtual ~FeatureSet(){}
 protected:
@@ -127,15 +126,20 @@ AddressSpaceType checkAddrSpace(const unsigned addrSpaceId);
 
 
 /// A registry compainint all supported feature sets
-struct FeatureSetRegistry : public std::map<string,FeatureSet> {
+struct FeatureSetRegistry : public llvm::StringMap<FeatureSet*> {
     FeatureSetRegistry(){        
-        (*this)["grewe11"] = Grewe11FeatureSet();
-        (*this)["fan19"] = Fan19FeatureSet();
-        (*this)["full"] =  FullFeatureSet();
+        (*this)["grewe11"] = new Grewe11FeatureSet();
+        (*this)["fan19"] = new Fan19FeatureSet();
+        (*this)["full"] =  new FullFeatureSet();
+        (*this)["default"] = new Fan19FeatureSet();
+    }
+    ~FeatureSetRegistry(){     
+        for(auto key : keys())
+            delete (*this)[key];
     }
 };
 
-/// Printing fucntions
+/// Printing functions
 template <typename T>
 void print_feature(llvm::StringMap<T> &feature_map, llvm::raw_ostream &out_stream){
     auto keys = feature_map.keys();

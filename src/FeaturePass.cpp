@@ -4,11 +4,8 @@
 #include <llvm/Analysis/CallGraphSCCPass.h>
 #include <llvm/Analysis/ScalarEvolution.h>
 
-//#include <llvm/Analysis/CallGraph.h>
-//#include <llvm/ADT/SCCIterator.h>
 #include <llvm/IR/Module.h>
 #include <llvm/Pass.h>
-
 #include <llvm/Passes/PassBuilder.h>
 #include <llvm/Passes/PassPlugin.h>
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
@@ -95,36 +92,33 @@ void Kofler13Pass::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 */
 
-/// Requires LoopAnalysis
+/// Feature extraction based on Kofelr et al. 13 loop heuristics
+/// Requires LoopAnalysis and ScalarEvolutionAnalysis.
 /// Current limitations:
-///  - it only works on natual loops (nested loops may be missing)
+///  - it only works on natual loops (in some case nested loops may be missing)
+///  - analysis is more accurate on canonical loops
+///  - support up to 3 nested level
 void Kofler13ExtractionPass::extract(llvm::Function &fun, llvm::FunctionAnalysisManager &fam) {
-    //LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>(fun).getLoopInfo();
-    //ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>(fun).getSE();
-    
+    std::cerr << "extract on function " << fun.getName().str() << "\n";
     LoopInfo &LI = fam.getResult<LoopAnalysis>(fun);
-    auto &SCEV = fam.getResult<ScalarEvolution>(fun);
-    
-    //SCEV &SC = fam.getResult<SCEV>(fun); 
-    std::cerr << "extract on function " << fun.getName() << "\n";
+    ScalarEvolution &SCEV = fam.getResult<ScalarEvolutionAnalysis>(fun);
 
     // skip the function if is only a declaration    
     if (fun.isDeclaration()) return;
 
     // 1. for each BB, we initialize it's "loop multiplier" to 1
-    std::unordered_map<const llvm::BasicBlock *, int> multiplier;
+    std::unordered_map<const llvm::BasicBlock *, unsigned> multiplier;
     for(const BasicBlock &bb : fun.getBasicBlockList()){
         multiplier[&bb] = 1.0f;
     }	
 
-    cerr << "print all loop\n";
+    cerr << "loops:\n";
     int count = 0;
-    for(const Loop *loop : LI) {
-        
-        cerr << " - " << count 
-             << " - name:" << loop->getName() 
-             << " - depth:" << loop->getLoopDepth()
-             << " - canonical:" << loop->isCanonical(SCEV)
+    for(const Loop *loop : LI) {        
+        cerr << " * " << count
+             << "\n  - name:" << loop->getName().str()
+             << "\n  - depth:" << loop->getLoopDepth()
+             << "\n  - canonical:" << loop->isCanonical(SCEV)
              << "\n";
         loop->getHeader()->dump();
         count++;
@@ -133,16 +127,22 @@ void Kofler13ExtractionPass::extract(llvm::Function &fun, llvm::FunctionAnalysis
     // 2. for each BB in a loop, we multiply that "loop multiplier" times 100
     const int default_loop_contribution = 100;
     for(const Loop *loop1 : LI) {
-        cerr << "loop " << loop1->getName().str() <<  "\n";
-        const int loop_contribution = default_loop_contribution;
-        if(loop1->isCanonical(SCEV)){ // if canonical, we can try a more accurate guess
-            auto iv =loop1->getInductionVariable(SCEV);
-            auto bounds = Loop::LoopBounds.getBounds(loop1, iv, SCEV);
-            // TODO XXX    
+        cerr << "loop 1 " << loop1->getName().str() <<  "\n";
+        // calculate the contributoin for the loop
+        int contrib1 = loopContribution(*loop1, SCEV);
+        // apply to each basic block in the loop
+        for(BasicBlock *bb : loop1->getBlocks()){ // TODO: shold we only count the body?
+            multiplier[bb] *= contrib1;
         }
-    
-        auto loopnest = loop1->getLoopsInPreorder();    
-
+        //iterate on sub-loop (2)       
+        for (const Loop *loop2 : loop1->getLoopsInPreorder()) {
+            cerr << "loop 2 " << loop2->getName().str() <<  "\n";        
+            int contrib2 = loopContribution(*loop2, SCEV);        
+            for(BasicBlock *bb : loop2->getBlocks()){
+                multiplier[bb] *= contrib2;
+            }        
+        }
+    /*
         for (const Loop *loop2 : loopnest) {
             cerr << "    subloop " << loop2->getName().str() << " tripCount: " << SCEV.getSmallConstantTripCount(loop) << "\n";
             unsigned tripCount = SCEV.getSmallConstantTripCount(loop);
@@ -159,6 +159,7 @@ void Kofler13ExtractionPass::extract(llvm::Function &fun, llvm::FunctionAnalysis
                 // cerr << "        BB " << bb->getName().str() << " contribution " << contribution << " total " << multiplier[bb] << "\n";
             }
         }
+    */
     }
 
     /// 3. evaluation
@@ -171,6 +172,34 @@ void Kofler13ExtractionPass::extract(llvm::Function &fun, llvm::FunctionAnalysis
     }
 
 }
+
+int Kofler13ExtractionPass::loopContribution(const llvm::Loop &loop, ScalarEvolution &SCEV){
+    // if canonical, we can try a more accurate guess
+    if(loop.isCanonical(SCEV)){ 
+        auto iv =loop.getInductionVariable(SCEV);
+        Optional<Loop::LoopBounds> opt_bounds = Loop::LoopBounds::getBounds(loop, *iv, SCEV);
+        if(opt_bounds){
+            Loop::LoopBounds &bounds = opt_bounds.getValue();
+            // if canonical, we assume the loop starts at 0 and ends at _ub_
+            llvm::Value &uv = bounds.getFinalIVValue() ;
+            // case 1: uv is an integer and constant
+            cerr << "checking uv for " << uv.getName().str() << "\n";            
+            // int
+            if (ConstantInt* ci = dyn_cast<ConstantInt>(&uv)) {
+                if (ci->getBitWidth() <= 32) {
+                    int int_val = ci->getSExtValue();
+                    cerr << "loop size is " << int_val << "\n";
+                    return int_val;
+                }
+            }
+            // case 2: uv is not a constant, then we use the default_loop_contribution         
+        } else  
+            cerr << "LoopBounds opt. not found\n";
+    }
+    return default_loop_contribution;
+}
+            
+
 
 // Pass registration.
 // Old-style pass registration for <opt> (registering dynamically loaded passes).

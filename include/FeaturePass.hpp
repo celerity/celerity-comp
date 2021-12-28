@@ -37,7 +37,7 @@ struct FeatureExtractionPass : public llvm::AnalysisInfoMixin<FeatureExtractionP
 
  protected:
     FeatureSetRegistry registered_feature_sets;
-    FeatureSet * features = &registered_feature_sets["default"];
+    FeatureSet * features = registered_feature_sets["default"];
     // TODO normalization must handled in the same way
     // Normalization
     
@@ -45,8 +45,9 @@ struct FeatureExtractionPass : public llvm::AnalysisInfoMixin<FeatureExtractionP
  public:
     /// this methods allow to change the underlying feature set
     void setFeatureSet(string &featureSetName){
-        features = &registered_feature_sets["default"];
+        features = registered_feature_sets[featureSetName];
     }
+    FeatureSet * getFeatureSet(){ return features; }
 
     /// runs the analysis on a specific function, returns a StringMap
     using Result = ResultFeatureExtraction;
@@ -87,13 +88,13 @@ struct FeaturePrinterPass : public llvm::PassInfoMixin<FeaturePrinterPass> {
 /// It requires the loop analysis pass ("loops") to be executed before of that pass.
 struct Kofler13ExtractionPass : public FeatureExtractionPass {
  private:
-    //function_ref<LoopInfo &(Function &)> LookupLoopInfo;
- public:
-    //explicit Kofler13ExtractionPass(function_ref<LoopInfo &(Function &)> LookupLoopInfo) 
-    //    : LookupLoopInfo(LookupLoopInfo) {}
+   const int default_loop_contribution = 100;
 
+ public:
     /// overwrite feature extraction for function
     virtual void extract(llvm::Function &fun, llvm::FunctionAnalysisManager &fam);
+    // calculate del loop contribution of a given loop (assume non nesting, which is calculated later)
+    int loopContribution(const llvm::Loop &loop, ScalarEvolution &SE);
 };
 
 

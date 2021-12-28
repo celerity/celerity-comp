@@ -4,17 +4,17 @@
 
 namespace celerity {
 
-void normalize(FeatureSet &fs);
-
-/* Feature normalization approches */
+/* Feature normalization approches 
 enum class feature_norm {
 	NONE,
 	SUM,
 	MINMAX_LINEAR,
 	MINMAX_LOG
 };
+*/
 
 // TODO TOFIX XXX so far only simple linear normalization is implemented	              
+inline
 void normalize(FeatureSet &fs){     
     float instructionContribution = 1.0f / float(fs.instruction_tot_contrib);
     if(fs.instruction_tot_contrib == 0) 

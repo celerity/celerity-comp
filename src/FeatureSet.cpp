@@ -1,5 +1,6 @@
 #include <fstream>
 #include <string>
+#include <set>
 
 #include <llvm/Support/MemoryBuffer.h>
 
@@ -44,7 +45,7 @@ void FeatureSet::print(llvm::raw_ostream &os)){
     }
 }*/
 
-
+/*
 void FeatureSet::print_to_file(const string &out_file){
 	cout << "Writing to file: " << out_file << endl;
 	ofstream outstream;
@@ -52,6 +53,7 @@ void FeatureSet::print_to_file(const string &out_file){
 	print(outstream);
 	outstream.close();
 }
+*/
 
 void FeatureSet::normalize(){
 	celerity::normalize(*this);
