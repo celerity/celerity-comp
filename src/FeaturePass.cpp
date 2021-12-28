@@ -29,7 +29,7 @@ void FeatureExtractionPass::extract(BasicBlock &bb){
     }
 }	
 
-void FeatureExtractionPass::extract(Function &fun){
+void FeatureExtractionPass::extract(llvm::Function &fun, llvm::FunctionAnalysisManager &fam){
     for (llvm::BasicBlock &bb : fun) 
         extract(bb);
 }
@@ -39,7 +39,7 @@ void FeatureExtractionPass::finalize(){
 }
 
 FeatureExtractionPass::Result FeatureExtractionPass::run(llvm::Function &fun, llvm::FunctionAnalysisManager &fam){
-    extract(fun);
+    extract(fun, fam);
     finalize();    
     return features->getFeatureValues();
 }
@@ -93,36 +93,62 @@ void Kofler13Pass::getAnalysisUsage(AnalysisUsage &AU) const {
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<ScalarEvolutionWrapperPass>();
 }
+*/
 
-/*
- * Current limitations:
- *  - it only works on natual loops (nested loops may be missing)
- */
-void Kofler13ExtractionPass::extract(llvm::Function &fun) {
-    // Current implementation requires that the LoopInfoWrapperPass pass calculates the loop information, 
-    // thus it should be ran before ofthis pass.    
+/// Requires LoopAnalysis
+/// Current limitations:
+///  - it only works on natual loops (nested loops may be missing)
+void Kofler13ExtractionPass::extract(llvm::Function &fun, llvm::FunctionAnalysisManager &fam) {
+    //LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>(fun).getLoopInfo();
+    //ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>(fun).getSE();
     
+    LoopInfo &LI = fam.getResult<LoopAnalysis>(fun);
+    auto &SCEV = fam.getResult<ScalarEvolution>(fun);
+    
+    //SCEV &SC = fam.getResult<SCEV>(fun); 
+    std::cerr << "extract on function " << fun.getName() << "\n";
+
+    // skip the function if is only a declaration    
+    if (fun.isDeclaration()) return;
+
     // 1. for each BB, we initialize it's "loop multiplier" to 1
-    if (fun.isDeclaration())
-        return;
     std::unordered_map<const llvm::BasicBlock *, int> multiplier;
     for(const BasicBlock &bb : fun.getBasicBlockList()){
-        multiplier[&bb] = 1;
+        multiplier[&bb] = 1.0f;
     }	
+
+    cerr << "print all loop\n";
+    int count = 0;
+    for(const Loop *loop : LI) {
+        
+        cerr << " - " << count 
+             << " - name:" << loop->getName() 
+             << " - depth:" << loop->getLoopDepth()
+             << " - canonical:" << loop->isCanonical(SCEV)
+             << "\n";
+        loop->getHeader()->dump();
+        count++;
+    }
 
     // 2. for each BB in a loop, we multiply that "loop multiplier" times 100
     const int default_loop_contribution = 100;
-    LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>(func).getLoopInfo();
-    ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>(func).getSE();
-    for(const Loop *topLevelLoop : LI) {
-         cerr << "loop " << topLevelLoop->getName().str() << " in function : " << func.getName().str() << endl;
-        auto loopnest = topLevelLoop->getLoopsInPreorder();
-        for (const Loop *loop : loopnest) {
-            cerr << "    Subloop " << loop->getName().str() << " tripCount: " << SE.getSmallConstantTripCount(loop) << "\n";
-            unsigned tripCount = SE.getSmallConstantTripCount(loop);
-            for(const BasicBlock *bb : loop->getBlocks()) {
+    for(const Loop *loop1 : LI) {
+        cerr << "loop " << loop1->getName().str() <<  "\n";
+        const int loop_contribution = default_loop_contribution;
+        if(loop1->isCanonical(SCEV)){ // if canonical, we can try a more accurate guess
+            auto iv =loop1->getInductionVariable(SCEV);
+            auto bounds = Loop::LoopBounds.getBounds(loop1, iv, SCEV);
+            // TODO XXX    
+        }
+    
+        auto loopnest = loop1->getLoopsInPreorder();    
+
+        for (const Loop *loop2 : loopnest) {
+            cerr << "    subloop " << loop2->getName().str() << " tripCount: " << SCEV.getSmallConstantTripCount(loop) << "\n";
+            unsigned tripCount = SCEV.getSmallConstantTripCount(loop);
+            for(const BasicBlock *bb : loop2->getBlocks()) {
                 int contribution;
-		if (tripCount > 1 && bb == loop->getExitingBlock()) {
+		if (tripCount > 1 && bb == loop2->getExitingBlock()) {
 		    contribution = tripCount;
 		} else if (tripCount > 1) {
 		    contribution = tripCount - 1;
@@ -134,9 +160,9 @@ void Kofler13ExtractionPass::extract(llvm::Function &fun) {
             }
         }
     }
+
     /// 3. evaluation
-    //feature_eval::eval_function(func);
-    for (llvm::BasicBlock &bb : func) {
+    for (llvm::BasicBlock &bb : fun) {
         int mult = multiplier[&bb];
         /// cerr << "BB mult: " << mult << endl;
         for(Instruction &i : bb){

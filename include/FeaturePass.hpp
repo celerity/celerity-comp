@@ -50,12 +50,12 @@ struct FeatureExtractionPass : public llvm::AnalysisInfoMixin<FeatureExtractionP
 
     /// runs the analysis on a specific function, returns a StringMap
     using Result = ResultFeatureExtraction;
-    ResultFeatureExtraction run(llvm::Function &F, llvm::FunctionAnalysisManager &);
+    ResultFeatureExtraction run(llvm::Function &fun, llvm::FunctionAnalysisManager &fam);
 
     /// feature extraction for basic block
     virtual void extract(llvm::BasicBlock &bb);	
     /// feature extraction for function
-    virtual void extract(llvm::Function &fun);
+    virtual void extract(llvm::Function &fun, llvm::FunctionAnalysisManager &fam);
     /// apply feature postprocessing steps such as normalization
     virtual void finalize();
 
@@ -82,14 +82,18 @@ struct FeaturePrinterPass : public llvm::PassInfoMixin<FeaturePrinterPass> {
 };
 
 
-
 /// An LLVM analysis pass to extract features using [Kofler et al., 13] loop heuristics.
 /// The heuristic gives more important (x100) to the features inside a loop.
 /// It requires the loop analysis pass ("loops") to be executed before of that pass.
 struct Kofler13ExtractionPass : public FeatureExtractionPass {
+ private:
+    //function_ref<LoopInfo &(Function &)> LookupLoopInfo;
  public:
+    //explicit Kofler13ExtractionPass(function_ref<LoopInfo &(Function &)> LookupLoopInfo) 
+    //    : LookupLoopInfo(LookupLoopInfo) {}
+
     /// overwrite feature extraction for function
-    virtual void extract(llvm::Function &fun);
+    virtual void extract(llvm::Function &fun, llvm::FunctionAnalysisManager &fam);
 };
 
 
