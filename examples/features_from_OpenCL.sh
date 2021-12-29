@@ -9,8 +9,8 @@ clang -c -x cl -emit-llvm -cl-std=CL2.0 -S  -Xclang -finclude-default-header  ve
 
 echo
 echo "Feature extraction from LLVM IR with the extractor utility"
-#../features -i vector-add-kernel.bc
-#../features -i vector-add-kernel.bc -fe kofler13
+#../feature-ext -i vector-add-kernel.bc
+#../feature-ext -i vector-add-kernel.bc -fe kofler13  
 
 echo
 echo "Feature evaluation from LLVM IR with LLVM modular optimizer (opt)"

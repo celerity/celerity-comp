@@ -84,16 +84,9 @@ llvm::PreservedAnalyses FeaturePrinterPass::run(llvm::Function &fun, llvm::Funct
     return PreservedAnalyses::all();
 }
 
-/*
-void Kofler13Pass::getAnalysisUsage(AnalysisUsage &AU) const {
-    AU.setPreservesAll();
-    AU.addRequired<CallGraphWrapperPass>();
-    AU.addRequired<LoopInfoWrapperPass>();
-    AU.addRequired<ScalarEvolutionWrapperPass>();
-}
-*/
 
-/// Feature extraction based on Kofelr et al. 13 loop heuristics
+
+/// Feature extraction based on Kofler et al. 13 loop heuristics
 /// Requires LoopAnalysis and ScalarEvolutionAnalysis.
 /// Current limitations:
 ///  - it only works on natual loops (in some case nested loops may be missing)
@@ -213,11 +206,10 @@ llvm::PassPluginLibraryInfo getFeatureExtractionPassPluginInfo() {
           // Register OpcodeCounterPrinter so that it can be used when
           // specifying pass pipelines with `-passes=`.
           PB.registerPipelineParsingCallback(
-              [&](StringRef Name, FunctionPassManager &FPM,
-                  ArrayRef<PassBuilder::PipelineElement>) {
+            [&](StringRef Name, FunctionPassManager &FPM, ArrayRef<PassBuilder::PipelineElement>) {
                 if (Name == "print<feature-extraction>") {
-                  FPM.addPass(FeaturePrinterPass(llvm::errs()));
-                  return true;
+                    FPM.addPass(FeaturePrinterPass(llvm::errs()));
+                    return true;
                 }
                 return false;
               });
@@ -228,8 +220,7 @@ llvm::PassPluginLibraryInfo getFeatureExtractionPassPluginInfo() {
           // using this callback means that FeaturePrinterPass will be called
           // whenever the vectoriser is used (i.e. when using '-O{1|2|3|s}'.
           PB.registerVectorizerStartEPCallback(
-              [](llvm::FunctionPassManager &PM,
-                 llvm::PassBuilder::OptimizationLevel Level) {
+              [](llvm::FunctionPassManager &PM, llvm::PassBuilder::OptimizationLevel Level) {
                 PM.addPass(FeaturePrinterPass(llvm::errs()));
               });
           // #3 REGISTRATION FOR "FAM.getResult<FeatureExtractionPass>(Func)"
@@ -241,7 +232,7 @@ llvm::PassPluginLibraryInfo getFeatureExtractionPassPluginInfo() {
                 FAM.registerPass([&] { return FeatureExtractionPass(); });
               });
           }
-        };
+        }; 
 }
 
 extern "C" LLVM_ATTRIBUTE_WEAK ::llvm::PassPluginLibraryInfo

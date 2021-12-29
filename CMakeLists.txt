@@ -36,7 +36,8 @@ if(EXTRACTOR_TOOL)
   add_executable(feature_ext ${FEATURE_SRC} src/feature_tool.cpp)
   llvm_map_components_to_libnames(llvm_libs support passes core irreader analysis)
   target_link_libraries(feature_ext ${llvm_libs})
-  #target_compile_options(feature_ext PUBLIC -fno-rtti)
+  target_compile_options(feature_ext PUBLIC -fno-rtti -Wl,-znodelete)
+  #target_compile_options(feature_ext PRIVATE -Wl,-znodelete)
 endif(EXTRACTOR_TOOL)
 
 
