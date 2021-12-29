@@ -1,7 +1,7 @@
 #include <unordered_map>
 
 #include <llvm/Analysis/LoopInfo.h>
-#include <llvm/Analysis/CallGraphSCCPass.h>
+//#include <llvm/Analysis/CallGraphSCCPass.h>
 #include <llvm/Analysis/ScalarEvolution.h>
 
 #include <llvm/IR/Module.h>
@@ -200,10 +200,10 @@ int Kofler13ExtractionPass::loopContribution(const llvm::Loop &loop, ScalarEvolu
 
 llvm::PassPluginLibraryInfo getFeatureExtractionPassPluginInfo() {
   return {
-    LLVM_PLUGIN_API_VERSION, "OpcodeCounter", LLVM_VERSION_STRING,
+    LLVM_PLUGIN_API_VERSION, "FeatureExtraction", LLVM_VERSION_STRING,
         [](PassBuilder &PB) {
           // #1 REGISTRATION FOR "opt -passes=print<feature-extraction>"
-          // Register OpcodeCounterPrinter so that it can be used when
+          // Register FeaturePrinterPass so that it can be used when
           // specifying pass pipelines with `-passes=`.
           PB.registerPipelineParsingCallback(
             [&](StringRef Name, FunctionPassManager &FPM, ArrayRef<PassBuilder::PipelineElement>) {
@@ -227,11 +227,19 @@ llvm::PassPluginLibraryInfo getFeatureExtractionPassPluginInfo() {
           // Register FeatureExtractionPass as an analysis pass. This is required so that
           // FeaturePrinterPass (or any other pass) can request the results
           // of FeatureExtractionPass.
+          
+          // #4 Registration for ScalarEvolution and LoopInfo pass
           PB.registerAnalysisRegistrationCallback(
               [](FunctionAnalysisManager &FAM) {
                 FAM.registerPass([&] { return FeatureExtractionPass(); });
               });
+          
+          PB.registerAnalysisRegistrationCallback(
+              [](FunctionAnalysisManager &FAM) {
+                FAM.registerPass([&] { return  LoopAnalysis(); });
+              });
           }
+
         }; 
 }
 

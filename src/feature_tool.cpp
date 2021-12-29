@@ -4,14 +4,22 @@
 #include <fstream>
 using namespace std;
 
-#include <llvm/Pass.h>
+
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IRReader/IRReader.h>
+#include "llvm/Analysis/AliasAnalysis.h"
 #include <llvm/Analysis/LoopAnalysisManager.h>
+#include <llvm/Pass.h>
+#include <llvm/Passes/PassPlugin.h>
 #include <llvm/Passes/PassBuilder.h>
 //#include <llvm/IR/PassManager.h>
 //#include <llvm/Passes/OptimizationLevel.h>
+#include <llvm/Passes/StandardInstrumentations.h>
+#include <llvm/CodeGen/CommandFlags.h>
+#include <llvm/Support/CommandLine.h>
+#include <llvm/Support/ErrorHandling.h>
+#include <llvm/Support/InitLLVM.h>
 using namespace llvm;
 
 #include "FeatureSet.hpp"
@@ -58,9 +66,7 @@ private:
 };
 
 /// function to load a module from file
-std::unique_ptr<Module> load_module(const std::string &fileName)
-{
-    LLVMContext context;
+std::unique_ptr<Module> load_module(LLVMContext &context, const std::string &fileName) {
     SMDiagnostic error;
     cout << "loading...";
     std::unique_ptr<Module> module = llvm::parseIRFile(fileName, error, context);
@@ -70,7 +76,7 @@ std::unique_ptr<Module> load_module(const std::string &fileName)
         std::cerr << "error: " << what;
         exit(1);
     } // end if
-    cout << "loading complete" << endl;
+    cout << " complete" << endl;
     return module;
 }
 
@@ -79,8 +85,9 @@ bool verbose = false;
 int optimization_level = 1;
 
 // Standalone tool that extracts different features representations out of a LLVM-IR program.
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
+    InitLLVM X(argc, argv);
+    LLVMContext context;
 
     FeatureSetRegistry &registered_fs = FeatureSetRegistry::getInstance();
     string fs_names = "\t-fs <feature set={";
@@ -149,14 +156,53 @@ int main(int argc, char *argv[])
     if (verbose)
         cout << "loading module from file" << endl;
     
-    std::unique_ptr<Module> module_ptr = load_module(fileName);
+    std::unique_ptr<Module> module_ptr = load_module(context, fileName);
     
-    ModuleAnalysisManager MAM;
-    //PassBuilder PB;
-    //PB.registerModuleAnalyses(MAM);
-    //ModulePassManager MPM  = PB.buildO0DefaultPipeline(PassBuilder::OptimizationLevel::O1);
-    ModulePassManager MPM;
+    /*
+    // check the target triple
+    Triple ModuleTriple(module_ptr->getTargetTriple());
+    std::string CPUStr, FeaturesStr;
+    TargetMachine *Machine = nullptr; // we ignore the triple defined in the module
+    std::unique_ptr<TargetMachine> TM(Machine);    
+    // no Profile-Guided Optimization
+    Optional<PGOOptions> P = PGOOptions("", "", "", PGOOptions::NoAction, PGOOptions::NoCSAction, true);
+    */
+
+    // Pass management with the new pass pipeline
+    PassInstrumentationCallbacks PIC;
+    StandardInstrumentations SI(true, false);
+    SI.registerCallbacks(PIC);
     
+    PassBuilder PB(false,nullptr,llvm::PipelineTuningOptions(),llvm::None, &PIC);
+    //registerEPCallbacks(PB, VerifyEachPass, DebugPM);
+      
+    // Load pass plugins for feature printing and let register pass builder callbacks
+    Expected<PassPlugin> PassPlugin = PassPlugin::Load("./libfeature_pass.so");
+    if (!PassPlugin) {
+      errs() << "Failed to load passes from libfeature_pass.so plugin\n";
+      errs() << "Problem with division " << toString(std::move(PassPlugin.takeError())) ;
+      errs() << "\n";
+      return 1;
+    }
+    PassPlugin->registerPassBuilderCallbacks(PB);
+
+    AAManager AA;
+    LoopAnalysisManager LAM(true);
+    FunctionAnalysisManager FAM(true);
+    CGSCCAnalysisManager CGAM(true);
+    ModuleAnalysisManager MAM(true);
+    // Register the AA manager first so that our version is the one used.
+    FAM.registerPass([&] { return std::move(AA); });
+    // Register all the basic analyses with the managers.
+    PB.registerModuleAnalyses(MAM);
+    PB.registerCGSCCAnalyses(CGAM);
+    PB.registerFunctionAnalyses(FAM);
+    PB.registerLoopAnalyses(LAM);
+    PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+    ModulePassManager MPM(true);
+ 
+    //cl::PrintOptionValues();
+
     // Run!
     cout << "pre run" << endl;
     MPM.run(*module_ptr, MAM); 
