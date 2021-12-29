@@ -36,16 +36,20 @@ using ResultFeatureExtraction = llvm::StringMap<float>;
 struct FeatureExtractionPass : public llvm::AnalysisInfoMixin<FeatureExtractionPass> {
 
  protected:
-    FeatureSetRegistry registered_feature_sets;
-    FeatureSet * features = registered_feature_sets["default"];
-    // TODO normalization must handled in the same way
-    // Normalization
+    FeatureSet * features;
+    // TODO normalization must handled here in the samo way (Normalization)
     
-
  public:
+    FeatureExtractionPass(){
+      FeatureSetRegistry &registry = FeatureSetRegistry::getInstance();
+      features = registry["default"];
+    }
+    virtual ~FeatureExtractionPass(){}
+
     /// this methods allow to change the underlying feature set
     void setFeatureSet(string &featureSetName){
-        features = registered_feature_sets[featureSetName];
+        FeatureSetRegistry &registry = FeatureSetRegistry::getInstance();
+        features = registry[featureSetName];
     }
     FeatureSet * getFeatureSet(){ return features; }
 
@@ -91,6 +95,9 @@ struct Kofler13ExtractionPass : public FeatureExtractionPass {
    const int default_loop_contribution = 100;
 
  public:
+    Kofler13ExtractionPass(){}
+    virtual ~Kofler13ExtractionPass(){}
+
     /// overwrite feature extraction for function
     virtual void extract(llvm::Function &fun, llvm::FunctionAnalysisManager &fam);
     // calculate del loop contribution of a given loop (assume non nesting, which is calculated later)

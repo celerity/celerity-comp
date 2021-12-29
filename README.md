@@ -1,7 +1,7 @@
 CELERITY Compiler Repository
 =========
 
-**Celerity-comp** is a collection of LLVM passes and supporting code that interact with modern predictive optimizer and runtime systems.  It is designed to work both as a standalone library and integrated within the Celerity runtime systems.
+**Celerity-comp** is a collection of LLVM passes and supporting code that interact with modern predictive optimizer and runtime systems.  It is designed to work both as a standalone library, as supporting external tool, and integrated within the Celerity runtime systems. It supports the new LLVM pass manager and does not implement the legacy one. 
 
 ### Table of contents
 * [Introduction](#introduction)

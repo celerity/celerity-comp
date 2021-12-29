@@ -36,6 +36,7 @@ void FeatureExtractionPass::finalize(){
 }
 
 FeatureExtractionPass::Result FeatureExtractionPass::run(llvm::Function &fun, llvm::FunctionAnalysisManager &fam){
+    std::cout << "Computing analysis for function " << fun.getName().str() << "\n";
     extract(fun, fam);
     finalize();    
     return features->getFeatureValues();
@@ -77,8 +78,8 @@ bool FeaturePass::runOnSCC(CallGraphSCC &SCC) {
 
 
 llvm::PreservedAnalyses FeaturePrinterPass::run(llvm::Function &fun, llvm::FunctionAnalysisManager &fam){
-    auto &feature_set = fam.getResult<FeatureExtractionPass>(fun);
     out_stream << "Printing analysis FeatureExtractionPass for function " << fun.getName() << "\n";
+    auto &feature_set = fam.getResult<FeatureExtractionPass>(fun);    
     print_feature(feature_set, out_stream);
     return PreservedAnalyses::all();
 }
@@ -120,7 +121,6 @@ void Kofler13ExtractionPass::extract(llvm::Function &fun, llvm::FunctionAnalysis
              << "\n  - depth:" << loop->getLoopDepth()
              << "\n  - canonical:" << loop->isCanonical(SCEV)
              << "\n";
-        loop->getHeader()->dump();
         count++;
     }
 

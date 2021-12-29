@@ -35,9 +35,14 @@ public:
     llvm::StringMap<float> feat;
     int instruction_num;
     int instruction_tot_contrib;
+    string name;
 
     llvm::StringMap<float> getFeatureValues(){
         return feat;
+    }
+
+    string getName(){
+        return name;
     }
 
     void add(const string &feature_name, int contribution = 1){
@@ -93,6 +98,8 @@ public:
     void print(llvm::raw_ostream &out_stream);    
     //void print_to_file(const string&);
     virtual void normalize();
+    FeatureSet() : name("default"){}
+    FeatureSet(string feature_set_name) : name(feature_set_name){}
     virtual ~FeatureSet(){}
 protected:
     /* Abstract method that evaluates an llvm instruction in terms of feature representation. */
@@ -103,16 +110,22 @@ protected:
 
 /* Feature set based on Fan's work, specifically designed for GPU architecture. */
 class Fan19FeatureSet : public FeatureSet {
+ public:
+    Fan19FeatureSet() : FeatureSet("fan19"){}
     string eval_instruction(const llvm::Instruction &inst, int contribution = 1);    
 };
 
 /* Feature set used by Grewe & O'Boyle. It is very generic and mainly designed to catch mem. vs comp. */
 class Grewe11FeatureSet : public FeatureSet {
+ public:
+    Grewe11FeatureSet() : FeatureSet("grewe13"){}
     string eval_instruction(const llvm::Instruction &inst, int contribution = 1);
 }; 
 
 /* Feature set used by Fan, designed for GPU architecture. */
 class FullFeatureSet : public FeatureSet {
+ public:
+    FullFeatureSet() : FeatureSet("grewe13"){}
     string eval_instruction(const llvm::Instruction &inst, int contribution = 1);    
 };
 
@@ -125,17 +138,28 @@ enum class AddressSpaceType { Private, Local, Global, Unknown };
 AddressSpaceType checkAddrSpace(const unsigned addrSpaceId);
 
 
-/// A registry compainint all supported feature sets
+/// A registry containing all supported feature sets. Singleton struct
 struct FeatureSetRegistry : public llvm::StringMap<FeatureSet*> {
+ private:
     FeatureSetRegistry(){        
         (*this)["grewe11"] = new Grewe11FeatureSet();
         (*this)["fan19"] = new Fan19FeatureSet();
         (*this)["full"] =  new FullFeatureSet();
         (*this)["default"] = new Fan19FeatureSet();
     }
+
     ~FeatureSetRegistry(){     
         for(auto key : keys())
             delete (*this)[key];
+    }
+
+ public:
+    FeatureSetRegistry(FeatureSetRegistry const&) = delete;
+    void operator=(FeatureSetRegistry const&) = delete;
+    
+    static FeatureSetRegistry& getInstance() {
+        static FeatureSetRegistry instance; // Guaranteed to be destroyed. Instantiated on first use.
+        return instance;
     }
 };
 

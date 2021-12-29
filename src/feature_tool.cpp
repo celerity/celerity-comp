@@ -10,7 +10,7 @@
 #include <llvm/IRReader/IRReader.h>
 //#include <llvm/Support/MemoryBuffer.h>
 //#include <llvm/Support/SourceMgr.h>
-//#include <llvm/Analysis/LoopAnalysisManager.h>
+#include <llvm/Analysis/LoopAnalysisManager.h>
 #include <llvm/Analysis/CGSCCPassManager.h>
 //#include <llvm/Analysis/LoopInfo.h> // InfoWrapperPass
 //#include <llvm/Analysis/CallGraph.h>
@@ -32,10 +32,17 @@ class ArgumentParser {
 public:
     ArgumentParser (int &argc, char **argv){
         for (int i=1; i < argc; ++i){
-            tokens.push_back(string(argv[i]));            
+            tokens.push_back(std::string(argv[i]));            
         }
     }
     string getCmdOption(const string &option) const {
+        for(int i=0; i<tokens.size(); i++){
+            if(tokens[i] == option)
+                if(i+1<tokens.size())
+                    return tokens[i+1]; 
+        }
+        return std::string(); // empty string
+        /*
         vector<string>::const_iterator itr;
         itr =  std::find(tokens.begin(), tokens.end(), option);
         if (itr != tokens.end() && ++itr != tokens.end()){
@@ -43,6 +50,7 @@ public:
         }
         const string empty = "";
         return empty;
+        */
     }
 
     bool cmdOptionExists(const string &option) const{
@@ -54,88 +62,90 @@ public:
         //return std::find(tokens.begin(), tokens.end(), option) != tokens.end();
     }
 private:
-    vector<string> tokens;
+    std::vector<string> tokens;
 };
 
 /// function to load a module from file
 std::unique_ptr<Module> load_module(const std::string &fileName){
     LLVMContext context;
     SMDiagnostic error;
+    cout << "loading...";
     std::unique_ptr<Module> module = llvm::parseIRFile(fileName, error, context);
     if(!module)  {
-        std::string what;
-        llvm::raw_string_ostream os(what);
-        error.print("error after ParseIR()", os);
-        std::cerr << what;
+        std::string what = error.getMessage().str();       
+        std::cerr << "error: " << what;
         exit(1);
     } // end if
+    cout << "loading complete" << endl;
     return module;
 }
 
 
-const string usage = "Celerity Feature Extractor\nUSAGE:\n\t-h help\n\t-i <kernel bitcode file>\n\t-o <output file>\n\t-fs <featureset={fan|grewe|full}>\n\t-fe <featureeval={default|kofler|polfeat}>\n\t-v verbose\n";
+string usage = "Celerity Feature Extractor\nUSAGE:\n\t-h help\n\t-i <kernel bitcode file>\n\t-o <output file>\n\t-fe <feature eval={default|kofler13|polfeat}>\n\t-v verbose\n";
 bool verbose = false;
 int optimization_level = 1;
 
 // Standalone tool that extracts different features representations out of a LLVM-IR program. 
 int main(int argc, char* argv[]) {
-    celerity::FeatureSetRegistry registered_fs; // XXX TODO this should be a singleton
+    FeatureSetRegistry &registered_fs = FeatureSetRegistry::getInstance();
+    string fs_names = "\t-fs <feature set={";
+    for(auto key : registered_fs.keys()){
+        fs_names += key; 
+        fs_names += "|";
+    }
+    fs_names[fs_names.size()-1] = '}';
+    fs_names += ">\n";    
+    usage += fs_names; 
 
     ArgumentParser input(argc, argv);
     if(input.cmdOptionExists("-h")) {
-        cout << usage;
-        exit(0);
+        cout << usage;  exit(0);
     }
-    if(input.cmdOptionExists("-v")) {
-        verbose = true;
-    }
+
+    if(input.cmdOptionExists("-v")) { verbose = true; }
+
     const string &fileName = input.getCmdOption("-i");
     if (fileName.empty()){
-        cout << usage;
-        cout << "Error: input filename not given";
+        cout << usage << "Error: input filename not given\n";
         exit(1);
     }
 
-
-    // define a feature extraction technique
-    celerity::FeatureExtractionPass *fe;
+    // set a feature extraction technique
+    celerity::FeatureExtractionPass *fe;    
     string feat_eval_opt = input.getCmdOption("-fe");
-    if (!feat_eval_opt.empty()){                
-        // XXX TODO to be supported flags: {default|kofler|polfeat}
-        if(feat_eval_opt == "kofler13") {
-            fe = new celerity::Kofler13ExtractionPass();
-        //else if(feat_eval_opt =="cr")
-        //    fe = new celerity::costrelation_set(fs);
-        } else //if(feat_eval_opt == "default") 
-        {
-            fe = new celerity::FeatureExtractionPass();
-        }
+    if(!input.cmdOptionExists("-fe") || feat_eval_opt.empty())
+        feat_eval_opt = "default";                 
+    if(feat_eval_opt == "kofler13") {
+        fe = new celerity::Kofler13ExtractionPass();
+    //else if(feat_eval_opt =="cr")
+    //    fe = new celerity::costrelation_set(fs);
+    } 
+    else { // default
+        fe = new celerity::FeatureExtractionPass();
     }
-
-
-   // define a feature set   
-    celerity::FeatureSet *fs;
+    
+   // set a feature set       
     string feat_set_opt = input.getCmdOption("-fs");
-    if (!feat_set_opt.empty()){  // supported flags: {gpu|grewe|full}        
-        if(registered_fs.count(feat_set_opt)){ // returns 1 if is in the map, 0 oterhwise
-            fs = registered_fs[feat_set_opt];
+    if (!feat_set_opt.empty()){         
+        if(!registered_fs.count(feat_set_opt)){ // returns 1 if is in the map, 0 oterhwise
+            feat_set_opt = "default";
         } 
-        else {
-            fs = registered_fs["default"];
-        }
         fe->setFeatureSet(feat_set_opt);
     }
 
+    if(verbose) {
+        cout << "feature-evaluation-technique: " << feat_eval_opt << endl;
+        cout << "feature-set: " << fe->getFeatureSet()->getName() << endl;        
+    }
 
-    if(verbose) cout << "feature-set: " << feat_set_opt << ", feature-evaluation-technique: " << feat_eval_opt << endl;
-
-    if(verbose) cout << "loading module from file" << endl; 
-    
-    //std::ifstream stream("hello.bc", std::ios_base::binary);
+    if(verbose) cout << "loading module from file" << endl;     
     std::unique_ptr<Module> module_ptr = load_module(fileName);
 
+/*
     // New pass handling code, now aligned with the new Pass Manager:
-    // 1. create the analysis managers
+    // 1. create pass manager and register our printing pass
+    //ModulePassManager MPM;    
+    // 2. create the analysis managers
     LoopAnalysisManager LAM;
     FunctionAnalysisManager FAM;
     CGSCCAnalysisManager CGAM;
@@ -144,48 +154,45 @@ int main(int argc, char* argv[]) {
     PassBuilder PB;
     // 3. use the default alias analysis pipeline (AAManager is a manager for alias)
     FAM.registerPass([&] { return PB.buildDefaultAAPipeline(); });
-    // 4. register basic analyses
+    // 4. register our analysis + basic analyses
+    MAM.registerPass([&] { return fe; });
     PB.registerModuleAnalyses(MAM);
     PB.registerCGSCCAnalyses(CGAM);
     PB.registerFunctionAnalyses(FAM);
     PB.registerLoopAnalyses(LAM);
     PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+ */   
     // 5.  Create the pass manager for a typical -O1 optimization pipeline. 
     // TODO XXX support from O1 to O3
-    ModulePassManager MPM = PB.buildPerModuleDefaultPipeline(llvm::PassBuilder::OptimizationLevel::O1);
-    /*
-   
-    // We build a pass manager that load our pass and dependent passes 
-    // (e.g., LoopInfoWrapperPass is required by kofler13_eval)    
-    legacy::PassManager manager;    
-    llvm::Pass *loop_analysis = new llvm::LoopInfoWrapperPass();
-    manager.add(loop_analysis);
-    llvm::Pass *call_graph_wrapper_pass = new llvm::CallGraphWrapperPass();
-    manager.add(call_graph_wrapper_pass);
-    */
-   /*
-    if(feat_eval_opt == "kofler13") {
-        llvm::Pass *scev = new llvm::ScalarEvolutionWrapperPass();
-        manager.add(scev);
-    }
-    */
-    // 6. add our pass to the manager
-    MPM.addPass(fe);    
+//    PB.buildPerModuleDefaultPipeline(llvm::PassBuilder::OptimizationLevel::O1);
+//    MPM.addPass(FeaturePrinterPass(llvm::errs()));
+//    PassBuilder PB;
+//    PB.registerPipelineStartEPCallback([&](ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
+//        MPM.addPass(FooPass());};
+    // 6. add our function pass to the pass manager (new PM needs an adaptor)
+    //MPM.addPass(createModuleToFunctionPassAdaptor(*fe));    
+    
     // 7. and run it over the module
     //Module &module = module_ptr;
-    MPM.run(*module_ptr, MAM); // note: this also prints the features in cerr
+    cout << "1" << endl;
 
+    ModuleAnalysisManager MAM;    
+    ModulePassManager MPM;
+    FunctionPassManager FPM;
+
+    cout << "2" << endl;
+    FPM.addPass(FeaturePrinterPass(llvm::outs()));
+    
+    cout << "3" << endl;
+    MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));  
+    cout << "4" << endl;
+    MPM.run(*module_ptr, MAM); // note: this also prints the features in cerr
+    cout << "5" << endl;
     // final printing to either cout or file
     const string &outFile = input.getCmdOption("-o");
     if (outFile.empty()){       
         print_feature<float>(fe->getFeatureSet()->feat, llvm::outs());
     }
-    else {
-        // fs->print_to_file(outFile);
-    }    
 
-    //the pass manager does these two deallocations:
-    delete fe; // delete loop_analysis;
-    //delete fs;
     return 0;
 } // end main
