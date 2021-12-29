@@ -62,18 +62,6 @@ struct FeatureExtractionPass : public llvm::AnalysisInfoMixin<FeatureExtractionP
 };
 
 
-/// Pass that print the results of a FeatureExtractionPass
-struct FeaturePrinterPass : public llvm::PassInfoMixin<FeaturePrinterPass> {
- public:
-    explicit FeaturePrinterPass(llvm::raw_ostream &stream) : out_stream(stream) {}
-
-    llvm::PreservedAnalyses run(llvm::Function &func, llvm::FunctionAnalysisManager &fam);
-
-    static bool isRequired() { return true; }
-
- private:
-    llvm::raw_ostream &out_stream;
-};
 
 
 /// An LLVM analysis pass to extract features using [Kofler et al., 13] loop heuristics.

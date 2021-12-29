@@ -26,7 +26,7 @@ option(CELERITY_RUNTIME "Install the integration layer for Celerity (requires ex
 # TODO: 3opts: only LLVM passes, only external tool, both
 
 # sources
-set(FEATURE_SRC src/FeaturePass.cpp src/FeatureSet.cpp)
+set(FEATURE_SRC src/FeaturePass.cpp src/FeaturePrinter.cpp src/FeatureSet.cpp)
 if(POLFEAT)
   set(FEATURE_SRC ${FEATURE_SRC} src/PolFeatPass.cpp)
 endif(POLFEAT)
@@ -68,6 +68,7 @@ if(SAMPLE_SCRIPTS)
   install(FILES "examples/example-application-sycl.cpp"  DESTINATION "${CMAKE_BINARY_DIR}/samples" )
   install(FILES "examples/matrix-multiply-sycl.cpp"      DESTINATION "${CMAKE_BINARY_DIR}/samples" )
   install(FILES "examples/simple-vector-add-sycl.cpp"    DESTINATION "${CMAKE_BINARY_DIR}/samples" )
-  install(FILES "examples/vector-add-CL.c"               DESTINATION "${CMAKE_BINARY_DIR}/samples" )
-  install(FILES "examples/vector-add-kernel.cl"          DESTINATION "${CMAKE_BINARY_DIR}/samples" )
+  install(FILES "examples/vector_add_host.c"             DESTINATION "${CMAKE_BINARY_DIR}/samples" )
+  install(FILES "examples/vector_add_kernel.cl"          DESTINATION "${CMAKE_BINARY_DIR}/samples" )
+  install(FILES "examples/simple_loop.c"                 DESTINATION "${CMAKE_BINARY_DIR}/samples" )
 endif(SAMPLE_SCRIPTS)

@@ -1,4 +1,5 @@
 #include <unordered_map>
+using namespace std;
 
 #include <llvm/Analysis/LoopInfo.h>
 //#include <llvm/Analysis/CallGraphSCCPass.h>
@@ -9,13 +10,12 @@
 #include <llvm/Passes/PassBuilder.h>
 #include <llvm/Passes/PassPlugin.h>
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
+using namespace llvm;
 
 #include "FeaturePass.hpp"
+#include "FeaturePrinter.hpp"
 #include "FeatureNormalization.hpp"
-
 using namespace celerity;
-using namespace llvm;
-using namespace std;
 
 
 llvm::AnalysisKey FeatureExtractionPass::Key;
@@ -77,12 +77,6 @@ bool FeaturePass::runOnSCC(CallGraphSCC &SCC) {
 */
 
 
-llvm::PreservedAnalyses FeaturePrinterPass::run(llvm::Function &fun, llvm::FunctionAnalysisManager &fam){
-    out_stream << "Printing analysis FeatureExtractionPass for function " << fun.getName() << "\n";
-    auto &feature_set = fam.getResult<FeatureExtractionPass>(fun);    
-    print_feature(feature_set, out_stream);
-    return PreservedAnalyses::all();
-}
 
 
 
@@ -227,7 +221,7 @@ llvm::PassPluginLibraryInfo getFeatureExtractionPassPluginInfo() {
           // Register FeatureExtractionPass as an analysis pass. This is required so that
           // FeaturePrinterPass (or any other pass) can request the results
           // of FeatureExtractionPass.
-          
+
           // #4 Registration for ScalarEvolution and LoopInfo pass
           PB.registerAnalysisRegistrationCallback(
               [](FunctionAnalysisManager &FAM) {
