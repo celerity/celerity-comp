@@ -4,18 +4,22 @@
 #include <fstream>
 
 
+#include <llvm/Pass.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 //#include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IRReader/IRReader.h>
 //#include <llvm/Support/MemoryBuffer.h>
 //#include <llvm/Support/SourceMgr.h>
+
 #include <llvm/Analysis/LoopAnalysisManager.h>
-#include <llvm/Analysis/CGSCCPassManager.h>
+//#include <llvm/Analysis/CGSCCPassManager.h>
 //#include <llvm/Analysis/LoopInfo.h> // InfoWrapperPass
 //#include <llvm/Analysis/CallGraph.h>
 //#include <llvm/Analysis/ScalarEvolution.h>
 #include <llvm/Passes/PassBuilder.h>
+#include <llvm/IR/PassManager.h>
+//#include <llvm/Transforms/IPO/PassManagerBuilder.h>
 
 #include "FeatureSet.hpp"
 #include "FeaturePass.hpp"
@@ -42,24 +46,11 @@ public:
                     return tokens[i+1]; 
         }
         return std::string(); // empty string
-        /*
-        vector<string>::const_iterator itr;
-        itr =  std::find(tokens.begin(), tokens.end(), option);
-        if (itr != tokens.end() && ++itr != tokens.end()){
-            return *itr;
-        }
-        const string empty = "";
-        return empty;
-        */
     }
 
     bool cmdOptionExists(const string &option) const{
-        for(string s : tokens){
-            if(s == option)
-                return true;
-        }
-        return false;
-        //return std::find(tokens.begin(), tokens.end(), option) != tokens.end();
+        for(string s : tokens) { if(s == option) return true; }
+        return false;        
     }
 private:
     std::vector<string> tokens;
@@ -174,25 +165,63 @@ int main(int argc, char* argv[]) {
     
     // 7. and run it over the module
     //Module &module = module_ptr;
-    cout << "1" << endl;
-
+/*
     ModuleAnalysisManager MAM;    
     ModulePassManager MPM;
-    FunctionPassManager FPM;
-
-    cout << "2" << endl;
-    FPM.addPass(FeaturePrinterPass(llvm::outs()));
-    
-    cout << "3" << endl;
+    FunctionPassManager FPM;    
+    FPM.addPass(FeaturePrinterPass(llvm::outs()));    
     MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));  
-    cout << "4" << endl;
+    cout << "pre run" << endl;
     MPM.run(*module_ptr, MAM); // note: this also prints the features in cerr
-    cout << "5" << endl;
+    cout << "post run" << endl;
     // final printing to either cout or file
     const string &outFile = input.getCmdOption("-o");
     if (outFile.empty()){       
         print_feature<float>(fe->getFeatureSet()->feat, llvm::outs());
     }
+*/
+    
+    
+    LoopAnalysisManager LAM;
+    FunctionAnalysisManager FAM;
+    CGSCCAnalysisManager CGAM;
+    ModuleAnalysisManager MAM;
+    
+    PassBuilder PB;
+/*
+    FAM.registerPass([&] { return PB.buildDefaultAAPipeline(); });
+*/
+    // Register all the basic analyses with the managers.
+    PB.registerModuleAnalyses(MAM);
+    PB.registerCGSCCAnalyses(CGAM);
+    PB.registerFunctionAnalyses(FAM);
+    PB.registerLoopAnalyses(LAM);
+    PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+
+    // Create the pass manager, with a  typical -O2 optimization pipeline.
+    ModulePassManager MPM = PB.buildPerModuleDefaultPipeline(llvm::PassBuilder::OptimizationLevel::O2);
+
+    // Run!
+    cout << "pre run" << endl;
+    MPM.run(*module_ptr, MAM); // note: this also prints the features in cerr
+    cout << "post run" << endl;
+    
+    
+ /*
+    PassBuilder PB;    
+    PB.registerVectorizerStartEPCallback(
+        [](llvm::FunctionPassManager &PM, llvm::PassBuilder::OptimizationLevel Level) {
+            PM.addPass(FeaturePrinterPass(llvm::errs()));
+        });
+    PB.registerAnalysisRegistrationCallback(
+        [](FunctionAnalysisManager &FAM) {
+            FAM.registerPass([&] { return FeatureExtractionPass(); });
+        });  
+  
+    cout << "pre run" << endl;
+    MPM.run(*module_ptr, MAM); // note: this also prints the features in cerr
+    cout << "post run" << endl;
+*/
 
     return 0;
 } // end main

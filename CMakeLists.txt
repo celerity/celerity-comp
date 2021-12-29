@@ -4,7 +4,7 @@ project(Celerity_Comp)
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
 # Requires LLVM
-find_package(LLVM REQUIRED CONFIG PATHS /usr/lib/llvm-10/lib )
+find_package(LLVM 12.0.0 REQUIRED CONFIG PATHS /usr/lib/llvm-12/lib )
 #find_package(LLVM REQUIRED CONFIG NO_DEFAULT_PATH)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
@@ -34,7 +34,7 @@ endif(POLFEAT)
 # build the feature extraction tool 
 if(EXTRACTOR_TOOL)
   add_executable(feature_ext ${FEATURE_SRC} src/feature_tool.cpp)
-  llvm_map_components_to_libnames(llvm_libs support core irreader analysis)
+  llvm_map_components_to_libnames(llvm_libs support passes core irreader analysis)
   target_link_libraries(feature_ext ${llvm_libs})
   #target_compile_options(feature_ext PUBLIC -fno-rtti)
 endif(EXTRACTOR_TOOL)

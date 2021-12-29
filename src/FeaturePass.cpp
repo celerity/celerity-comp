@@ -201,46 +201,44 @@ int Kofler13ExtractionPass::loopContribution(const llvm::Loop &loop, ScalarEvolu
             
 
 
-// Pass registration.
-// Old-style pass registration for <opt> (registering dynamically loaded passes).
-//static RegisterPass<FeaturePass> DefaultFP("feature-pass", "Default feature extraction pass",  false /* Only looks at CFG */,  false /* Analysis Pass */);
-//static RegisterPass<Kofler13Pass> Kofler13FP("kofler13-pass", "Feature extraction pass based on [Kofler et al., ICS'13]",  false /* Only looks at CFG */,  false /* Analysis Pass */);
+// Pass registration using the new LLVM PassManager
 
-/*
+
+
 llvm::PassPluginLibraryInfo getFeatureExtractionPassPluginInfo() {
   return {
     LLVM_PLUGIN_API_VERSION, "OpcodeCounter", LLVM_VERSION_STRING,
         [](PassBuilder &PB) {
-          // #1 REGISTRATION FOR "opt -passes=print<opcode-counter>"
+          // #1 REGISTRATION FOR "opt -passes=print<feature-extraction>"
           // Register OpcodeCounterPrinter so that it can be used when
           // specifying pass pipelines with `-passes=`.
           PB.registerPipelineParsingCallback(
               [&](StringRef Name, FunctionPassManager &FPM,
                   ArrayRef<PassBuilder::PipelineElement>) {
-                if (Name == "print<opcode-counter>") {
-                  FPM.addPass(OpcodeCounterPrinter(llvm::errs()));
+                if (Name == "print<feature-extraction>") {
+                  FPM.addPass(FeaturePrinterPass(llvm::errs()));
                   return true;
                 }
                 return false;
               });
           // #2 REGISTRATION FOR "-O{1|2|3|s}"
-          // Register OpcodeCounterPrinter as a step of an existing pipeline.
+          // Register FeaturePrinterPass as a step of an existing pipeline.
           // The insertion point is specified by using the
           // 'registerVectorizerStartEPCallback' callback. To be more precise,
-          // using this callback means that OpcodeCounterPrinter will be called
+          // using this callback means that FeaturePrinterPass will be called
           // whenever the vectoriser is used (i.e. when using '-O{1|2|3|s}'.
           PB.registerVectorizerStartEPCallback(
               [](llvm::FunctionPassManager &PM,
                  llvm::PassBuilder::OptimizationLevel Level) {
-                PM.addPass(OpcodeCounterPrinter(llvm::errs()));
+                PM.addPass(FeaturePrinterPass(llvm::errs()));
               });
-          // #3 REGISTRATION FOR "FAM.getResult<OpcodeCounter>(Func)"
-          // Register OpcodeCounter as an analysis pass. This is required so that
-          // OpcodeCounterPrinter (or any other pass) can request the results
-          // of OpcodeCounter.
+          // #3 REGISTRATION FOR "FAM.getResult<FeatureExtractionPass>(Func)"
+          // Register FeatureExtractionPass as an analysis pass. This is required so that
+          // FeaturePrinterPass (or any other pass) can request the results
+          // of FeatureExtractionPass.
           PB.registerAnalysisRegistrationCallback(
               [](FunctionAnalysisManager &FAM) {
-                FAM.registerPass([&] { return OpcodeCounter(); });
+                FAM.registerPass([&] { return FeatureExtractionPass(); });
               });
           }
         };
@@ -248,6 +246,5 @@ llvm::PassPluginLibraryInfo getFeatureExtractionPassPluginInfo() {
 
 extern "C" LLVM_ATTRIBUTE_WEAK ::llvm::PassPluginLibraryInfo
 llvmGetPassPluginInfo() {
-  return getOpcodeCounterPluginInfo();
+  return getFeatureExtractionPassPluginInfo();
 }
-*/
