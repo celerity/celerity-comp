@@ -4,7 +4,6 @@
 #include <fstream>
 using namespace std;
 
-
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IRReader/IRReader.h>
@@ -13,8 +12,6 @@ using namespace std;
 #include <llvm/Pass.h>
 #include <llvm/Passes/PassPlugin.h>
 #include <llvm/Passes/PassBuilder.h>
-//#include <llvm/IR/PassManager.h>
-//#include <llvm/Passes/OptimizationLevel.h>
 #include <llvm/Passes/StandardInstrumentations.h>
 #include <llvm/CodeGen/CommandFlags.h>
 #include <llvm/Support/CommandLine.h>
@@ -23,7 +20,9 @@ using namespace std;
 using namespace llvm;
 
 #include "FeatureSet.hpp"
-#include "FeaturePass.hpp"
+#include "FeatureAnalysis.hpp"
+#include "Kofler13Analysis.hpp"
+#include "FeaturePrinter.hpp"
 using namespace celerity;
 
 
@@ -121,19 +120,19 @@ int main(int argc, char *argv[]) {
     }
 
     // set a feature extraction technique
-    celerity::FeatureExtractionPass *fe;
+    celerity::FeatureAnalysis *fe;
     string feat_eval_opt = input.getCmdOption("-fe");
     if (!input.cmdOptionExists("-fe") || feat_eval_opt.empty())
         feat_eval_opt = "default";
     if (feat_eval_opt == "kofler13")
     {
-        fe = new celerity::Kofler13ExtractionPass();
+        fe = new celerity::Kofler13Analysis();
         // else if(feat_eval_opt =="cr")
         //     fe = new celerity::costrelation_set(fs);
     }
     else
     { // default
-        fe = new celerity::FeatureExtractionPass();
+        fe = new celerity::FeatureAnalysis();
     }
 
     // set a feature set
@@ -158,25 +157,12 @@ int main(int argc, char *argv[]) {
     
     std::unique_ptr<Module> module_ptr = load_module(context, fileName);
     
-    /*
-    // check the target triple
-    Triple ModuleTriple(module_ptr->getTargetTriple());
-    std::string CPUStr, FeaturesStr;
-    TargetMachine *Machine = nullptr; // we ignore the triple defined in the module
-    std::unique_ptr<TargetMachine> TM(Machine);    
-    // no Profile-Guided Optimization
-    Optional<PGOOptions> P = PGOOptions("", "", "", PGOOptions::NoAction, PGOOptions::NoCSAction, true);
-    */
 
     // Pass management with the new pass pipeline
     PassInstrumentationCallbacks PIC;
     StandardInstrumentations SI(true, false);
-    SI.registerCallbacks(PIC);
-    
-    PassBuilder PB(false,nullptr,llvm::PipelineTuningOptions(),llvm::None, &PIC);
-    //registerEPCallbacks(PB, VerifyEachPass, DebugPM);
-      
-    // Load pass plugins for feature printing and let register pass builder callbacks
+    SI.registerCallbacks(PIC);  
+    PassBuilder PB(false,nullptr,llvm::PipelineTuningOptions(),llvm::None, &PIC);    
     Expected<PassPlugin> PassPlugin = PassPlugin::Load("./libfeature_pass.so");
     if (!PassPlugin) {
       errs() << "Failed to load passes from libfeature_pass.so plugin\n";

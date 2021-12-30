@@ -1,15 +1,17 @@
 #include <fstream>
 #include <string>
 #include <set>
+using namespace std;
 
 #include <llvm/Support/MemoryBuffer.h>
+using namespace llvm;
 
 #include "FeatureSet.hpp"
 #include "FeatureNormalization.hpp"
-
 using namespace celerity;
-using namespace llvm;
-using namespace std;
+
+
+FeatureSet::~FeatureSet(){}
 
 void FeatureSet::print(llvm::raw_ostream &out_stream){
     out_stream << "raw values\n";
@@ -59,6 +61,7 @@ void FeatureSet::normalize(){
 	celerity::normalize(*this);
 }
 
+
 string FeatureSet::get_type_prefix(const llvm::Instruction &inst) {
     Type *t = inst.getType();
     if (t->isHalfTy()) {
@@ -67,12 +70,15 @@ string FeatureSet::get_type_prefix(const llvm::Instruction &inst) {
         return "f32.";
     } else if (t->isDoubleTy()) {
         return "f64.";
-    } /*else if (t->isIntegerTy()) {
-        return "i" + to_string(t->getIntegerBitWidth()) + ".";
-    }*/
+    } 
+    //else if (t->isIntegerTy()) {
+    //    return "i" + to_string(t->getIntegerBitWidth()) + ".";
+    //}
     return "";
 }
 
+
+Fan19FeatureSet::~Fan19FeatureSet(){}
 
 // List of LLVM instructions mapped into a specific feature
 const set<string> BIN_OPS = {"add","fadd", "sub", "fsub", "mul", "fmul", "udiv", "sdiv", "fdiv", "urem", "srem", "frem"};//rem- remainder of a division by...
@@ -148,6 +154,18 @@ string Fan19FeatureSet::eval_instruction(const llvm::Instruction &inst, int cont
     return "other";
 }
 
+
+Grewe11FeatureSet::~Grewe11FeatureSet(){}
+
+string Grewe11FeatureSet::eval_instruction(const llvm::Instruction &inst, int contribution){
+    // TODO FIXME XXX Nadjib
+    // implementation missing
+    return "";
+}
+
+
+FullFeatureSet::~FullFeatureSet(){}
+
 string FullFeatureSet::eval_instruction(const llvm::Instruction &inst, int contribution){    
     string i_name = inst.getOpcodeName();
     if(instr_check(BIN_OPS,i_name)) {
@@ -156,11 +174,6 @@ string FullFeatureSet::eval_instruction(const llvm::Instruction &inst, int contr
     return i_name;
 }
 
-string Grewe11FeatureSet::eval_instruction(const llvm::Instruction &inst, int contribution){
-    // TODO FIXME XXX Nadjib
-    // implementation missing
-    return "";
-}
 
 AddressSpaceType celerity::checkAddrSpace(const unsigned addrSpaceId) {
     /*

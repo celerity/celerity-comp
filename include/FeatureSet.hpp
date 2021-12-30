@@ -2,13 +2,10 @@
 
 #include <string>
 #include <iostream>
-//#include <set>
-//#include <unordered_map>
-//#include <map>
+using namespace std;
 
 #include <llvm/IR/Instructions.h>
 
-using namespace std;
 namespace celerity {
 
 /// A set of feature, including both raw values and normalized ones. 
@@ -19,6 +16,11 @@ public:
     int instruction_num;
     int instruction_tot_contrib;
     string name;
+
+public:
+    FeatureSet() : name("default"){}
+    FeatureSet(string feature_set_name) : name(feature_set_name){}
+    virtual ~FeatureSet();
 
     llvm::StringMap<float> getFeatureValues(){
         return feat;
@@ -78,16 +80,15 @@ public:
     */
 
     //virtual float get_feature(string &feature_name){ return feat[feature_name]; }
+    string get_type_prefix(const llvm::Instruction &inst);
     void print(llvm::raw_ostream &out_stream);    
     //void print_to_file(const string&);
-    virtual void normalize();
-    FeatureSet() : name("default"){}
-    FeatureSet(string feature_set_name) : name(feature_set_name){}
-    virtual ~FeatureSet(){}
+    void normalize();
+
 protected:
     /* Abstract method that evaluates an llvm instruction in terms of feature representation. */
     virtual string eval_instruction(const llvm::Instruction &inst, int contribution = 1) = 0;
-    virtual string get_type_prefix(const llvm::Instruction &inst);
+    
 };
 
 
@@ -95,21 +96,24 @@ protected:
 class Fan19FeatureSet : public FeatureSet {
  public:
     Fan19FeatureSet() : FeatureSet("fan19"){}
-    string eval_instruction(const llvm::Instruction &inst, int contribution = 1);    
+    virtual ~Fan19FeatureSet();
+    virtual string eval_instruction(const llvm::Instruction &inst, int contribution = 1);    
 };
 
 /* Feature set used by Grewe & O'Boyle. It is very generic and mainly designed to catch mem. vs comp. */
 class Grewe11FeatureSet : public FeatureSet {
  public:
     Grewe11FeatureSet() : FeatureSet("grewe13"){}
-    string eval_instruction(const llvm::Instruction &inst, int contribution = 1);
+    virtual ~Grewe11FeatureSet();
+    virtual string eval_instruction(const llvm::Instruction &inst, int contribution = 1);
 }; 
 
 /* Feature set used by Fan, designed for GPU architecture. */
 class FullFeatureSet : public FeatureSet {
  public:
-    FullFeatureSet() : FeatureSet("grewe13"){}
-    string eval_instruction(const llvm::Instruction &inst, int contribution = 1);    
+    FullFeatureSet() : FeatureSet("full"){}
+    virtual ~FullFeatureSet();
+    virtual string eval_instruction(const llvm::Instruction &inst, int contribution = 1);    
 };
 
 

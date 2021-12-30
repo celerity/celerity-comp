@@ -26,9 +26,18 @@ option(CELERITY_RUNTIME "Install the integration layer for Celerity (requires ex
 # TODO: 3opts: only LLVM passes, only external tool, both
 
 # sources
-set(FEATURE_SRC src/FeaturePass.cpp src/FeaturePrinter.cpp src/FeatureSet.cpp)
+set(FEATURE_INCLUDE 
+  include/FeatureAnalysis.hpp  include/FeatureNormalization.hpp  
+  include/FeaturePrinter.hpp   include/FeatureSet.hpp  
+  include/KernelInvariant.hpp  include/Kofler13Analysis.hpp)
+
+set(FEATURE_SRC 
+  src/FeatureAnalysis.cpp   src/FeaturePrinter.cpp  
+  src/FeatureSet.cpp        src/Kofler13Analysis.cpp)
+
 if(POLFEAT)
-  set(FEATURE_SRC ${FEATURE_SRC} src/PolFeatPass.cpp)
+  set(FEATURE_INCLUDE ${FEATURE_INCLUDE}  include/PolFeatAnalysis.hpp)
+  set(FEATURE_SRC     ${FEATURE_SRC}      src/PolFeatAnalysis.cpp)
 endif(POLFEAT)
 
 # build the feature extraction tool 
@@ -36,7 +45,7 @@ if(EXTRACTOR_TOOL)
   add_executable(feature_ext ${FEATURE_SRC} src/feature_tool.cpp)
   llvm_map_components_to_libnames(llvm_libs support passes core irreader analysis)
   target_link_libraries(feature_ext ${llvm_libs})
-  target_compile_options(feature_ext PUBLIC -fno-rtti -Wl,-znodelete)
+  target_compile_options(feature_ext PUBLIC -Wl,-znodelete)
   #target_compile_options(feature_ext PRIVATE -Wl,-znodelete)
 endif(EXTRACTOR_TOOL)
 
@@ -45,7 +54,7 @@ endif(EXTRACTOR_TOOL)
 #add_library(feature_eval MODULE ${FEATURE_SRC} src/feature_eval.cpp)
 #add_library(feature_pass MODULE ${FEATURE_SRC} src/feature_pass.cpp)
 #add_llvm_loadable_module(FeatureEvaluationPass feature_eval.cpp)
-add_library(feature_pass MODULE ${FEATURE_SRC} src/FeaturePass.cpp)
+add_library(feature_pass MODULE ${FEATURE_SRC})
 
 
 # Build the integration layer to be used with the Celerity runtime

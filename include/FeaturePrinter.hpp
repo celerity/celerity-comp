@@ -10,7 +10,7 @@ using namespace llvm;
 
 namespace celerity {
 
-/// Pass that print the results of a FeatureExtractionPass
+/// Pass that print the results of a FeatureAnalysis
 struct FeaturePrinterPass : public llvm::PassInfoMixin<FeaturePrinterPass> {
  public:
     explicit FeaturePrinterPass(llvm::raw_ostream &stream) : out_stream(stream) {}
