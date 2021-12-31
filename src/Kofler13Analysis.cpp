@@ -122,57 +122,10 @@ int Kofler13Analysis::loopContribution(const llvm::Loop &loop, ScalarEvolution &
     return default_loop_contribution;
 }
             
+
 //-----------------------------------------------------------------------------
-// Pass registration using the new LLVM PassManager
+// Register the Kofler13 analysis in the FeatureAnalysis registry
 //-----------------------------------------------------------------------------
-/*
-llvm::PassPluginLibraryInfo getFeatureExtractionPassPluginInfo() {
-  return {
-    LLVM_PLUGIN_API_VERSION, "Kofler13FeatureExtraction", LLVM_VERSION_STRING,
-        [](PassBuilder &PB) {
-          // #1 REGISTRATION FOR "opt -passes=print<feature-extraction>"
-          // Register FeaturePrinterPass so that it can be used when
-          // specifying pass pipelines with `-passes=`.
-          PB.registerPipelineParsingCallback(
-            [&](StringRef Name, FunctionPassManager &FPM, ArrayRef<PassBuilder::PipelineElement>) {
-                if (Name == "print<kofler13feature>") {
-                    FPM.addPass(FeaturePrinterPass(llvm::errs()));
-                    return true;
-                }
-                return false;
-              });
-          // #2 REGISTRATION FOR "-O{1|2|3|s}"
-          // Register FeaturePrinterPass as a step of an existing pipeline.
-          // The insertion point is specified by using the
-          // 'registerVectorizerStartEPCallback' callback. To be more precise,
-          // using this callback means that FeaturePrinterPass will be called
-          // whenever the vectoriser is used (i.e. when using '-O{1|2|3|s}'.
-          PB.registerVectorizerStartEPCallback(
-              [](llvm::FunctionPassManager &PM, llvm::PassBuilder::OptimizationLevel Level) {
-                PM.addPass(FeaturePrinterPass(llvm::errs()));
-              });
-          // #3 REGISTRATION FOR "FAM.getResult<FeatureExtractionPass>(Func)"
-          // Register FeatureExtractionPass as an analysis pass. This is required so that
-          // FeaturePrinterPass (or any other pass) can request the results
-          // of FeatureExtractionPass.
-
-          // #4 Registration for ScalarEvolution and LoopInfo pass
-          PB.registerAnalysisRegistrationCallback(
-              [](FunctionAnalysisManager &FAM) {
-                FAM.registerPass([&] { return FeatureExtractionPass(); });
-              });
-          
-          PB.registerAnalysisRegistrationCallback(
-              [](FunctionAnalysisManager &FAM) {
-                FAM.registerPass([&] { return  LoopAnalysis(); });
-              });
-          }
-
-        }; 
-}
-
-extern "C" LLVM_ATTRIBUTE_WEAK ::llvm::PassPluginLibraryInfo
-llvmGetPassPluginInfo() {
-  return getFeatureExtractionPassPluginInfo();
-}
-*/
+//using FARegistry = celerity::Registry<celerity::FeatureAnalysis*>;
+static celerity::FeatureAnalysis* _static_fa_ptr_ = new celerity::Kofler13Analysis; // dynamic_cast<celerity::FeatureAnalysis*>(&_static_fa_);
+static bool _registered_feature_analysis_ = FARegistry::registerByKey("kofler13", _static_fa_ptr_ ); 

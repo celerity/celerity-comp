@@ -1,15 +1,12 @@
 #pragma once
 
-
 #include <llvm/IR/PassManager.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/BasicBlock.h>
-
-
 using namespace llvm;
 
 #include "FeatureSet.hpp"
-
+#include "Registry.hpp"
 
 namespace celerity {
 
@@ -53,8 +50,7 @@ struct FeatureAnalysis : public llvm::AnalysisInfoMixin<FeatureAnalysis> {
  
   private:
     static llvm::AnalysisKey Key;
-    friend struct llvm::AnalysisInfoMixin<FeatureAnalysis>;
-   
+    friend struct llvm::AnalysisInfoMixin<FeatureAnalysis>;   
 
 }; // end FeatureAnalysis
 
@@ -68,5 +64,6 @@ struct FeatureAnalysisParam {
   bool verbose;
 };
 
+using FARegistry = Registry<celerity::FeatureAnalysis*>;
 
 } // end namespace celerity

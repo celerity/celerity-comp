@@ -83,6 +83,13 @@ bool FeaturePass::runOnSCC(CallGraphSCC &SCC) {
 */
 
 
+//-----------------------------------------------------------------------------
+// Register the analysis in a FeatureAnalysis registry
+//-----------------------------------------------------------------------------
+using FARegistry = celerity::Registry<celerity::FeatureAnalysis*>;
+static celerity::FeatureAnalysis _static_fa_();
+static celerity::FeatureAnalysis* _static_fa_ptr_ = new celerity::FeatureAnalysis; // dynamic_cast<celerity::FeatureAnalysis*>(&_static_fa_);
+static bool _registered_feature_analysis_ = FARegistry::registerByKey("default", _static_fa_ptr_ ); 
 
 //-----------------------------------------------------------------------------
 // Pass registration using the new LLVM PassManager

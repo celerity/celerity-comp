@@ -26,10 +26,6 @@ using namespace llvm;
 using namespace celerity;
 
 
-
-/// utility for parsing command line and plugin params
-//llvm::Expected<FeatureAnalysisParam> parseAnalysisArguments(std::string &arguments, bool printErrors, bool passNameCheck);
-//llvm::Expected<FeatureAnalysisParam> parseAnalysisArguments(int argc, char **argv,  bool printErrors, bool passNameCheck);
 //-----------------------------------------------------------------------------
 // Command line parsing
 //-----------------------------------------------------------------------------
@@ -51,47 +47,14 @@ cl::opt<string> IRFilename(cl::Positional, cl::desc("<input_bitcode_file>"), cl:
 // verbose
 cl::opt<bool> Verbose("v", cl::desc("Verbose"), cl::init(false));
 
-
-/*
-Expected<FeatureAnalysisParam> parseAnalysisArguments(string &arguments, bool printErrors, bool passNameCheck)
-{
-  // string to argv and argc
-  bool first_space = true;
-  bool first_char = true;
-  std::vector<unsigned> argv_index;
-  string argv_copy = arguments + " ";
-  // from string to argv and argc
-  for (int i = 0; i < argv_copy.size(); i++)
-  {
-    char &current_char = argv_copy[i];
-    if (current_char == ' ')
-    {
-      if (first_space)
-        current_char = '\n';
-      first_space = false;
-      first_char = true;
-    } // not a space
-    else
-    {
-      if (first_char)
-        argv_index.push_back(i);
-      first_char = false;
-      first_space = true;
-    }
-  }
-  char str[1024];
-  strncpy(str, argv_copy.c_str(), 1024);
-  int argc = argv_index.size();
-  char *argv[1024];
-  for (int i = 0; i < argc; i++)
-    argv[i] = str + argv_index[i];
-  return parseAnalysisArguments(argc, argv, printErrors, passNameCheck);
-}
-*/
-
 Expected<FeatureAnalysisParam> parseAnalysisArguments(int argc, char **argv, bool printErrors)
 {
   // LLVM command line parser
+  string descr_list = "Specify the feature analysis algorithm. Supported: ";
+  for(StringRef l : FARegistry::getKeyList() ) {
+    descr_list += " "; descr_list += l;
+  }
+  FAnal.setDescription(descr_list);
   cl::ParseCommandLineOptions(argc, argv);
 
   // if we are using the extractor tool, we need the input file
@@ -106,9 +69,11 @@ Expected<FeatureAnalysisParam> parseAnalysisArguments(int argc, char **argv, boo
 }
 
 /// function to load a module from file
-std::unique_ptr<Module> load_module(LLVMContext &context, const std::string &fileName) {
+std::unique_ptr<Module> load_module(LLVMContext &context, const std::string &fileName, bool verbose) {
     SMDiagnostic error;
-    cout << "loading...";
+    if (verbose)
+        cout << "loading module from file" << fileName << endl;
+    
     std::unique_ptr<Module> module = llvm::parseIRFile(fileName, error, context);
     if (!module)
     {
@@ -116,15 +81,16 @@ std::unique_ptr<Module> load_module(LLVMContext &context, const std::string &fil
         std::cerr << "error: " << what;
         exit(1);
     } // end if
-    cout << " complete" << endl;
+    if (verbose) {
+        cout << "loading complete"  << endl;
+        cout << " - name " << module->getName().str() << endl;
+        cout << " - number of functions" << module->getFunctionList().size() << endl;
+        cout << " - instruction count #" << module->getInstructionCount() << endl;
+        
+    }
     return module;
 }
 
-/*
-string usage = "Celerity Feature Extractor\nUSAGE:\n\t-h help\n\t-i <kernel bitcode file>\n\t-o <output file>\n\t-fe <feature eval={default|kofler13|polfeat}>\n\t-v verbose\n";
-*/
-bool verbose = false;
-int optimization_level = 1;
 
 // Standalone tool that extracts different features representations out of a LLVM-IR program.
 int main(int argc, char *argv[]) {
@@ -137,90 +103,18 @@ int main(int argc, char *argv[]) {
         exit(0);
     }
 
-/*
-    FeatureSetRegistry &registered_fs = FeatureSetRegistry::getInstance();
-    string fs_names = "\t-fs <feature set={";
-    for (auto key : registered_fs.keys())
-    {
-        fs_names += key;
-        fs_names += "|";
-    }
-    fs_names[fs_names.size() - 1] = '}';
-    fs_names += ">\n";
-    usage += fs_names;
-
-    ArgumentParser input(argc, argv);
-
-    if (input.cmdOptionExists("-h"))
-    {
-        cout << usage;
-        exit(0);
-    }
-
-    if (input.cmdOptionExists("-v"))
-    {
-        verbose = true;
-    }
-
-    const string &fileName = input.getCmdOption("-i");
-    if (fileName.empty())
-    {
-        cout << usage << "Error: input filename not given\n";
-        exit(1);
-    }
-
-    // set a feature extraction technique
-    celerity::FeatureAnalysis *fe;
-    string feat_eval_opt = input.getCmdOption("-fe");
-    if (!input.cmdOptionExists("-fe") || feat_eval_opt.empty())
-        feat_eval_opt = "default";
-    if (feat_eval_opt == "kofler13")
-    {
-        fe = new celerity::Kofler13Analysis();
-        // else if(feat_eval_opt =="cr")
-        //     fe = new celerity::costrelation_set(fs);
-    }
-    else
-    { // default
-        fe = new celerity::FeatureAnalysis();
-    }
-
-    // set a feature set
-    string feat_set_opt = input.getCmdOption("-fs");
-    if (!feat_set_opt.empty())
-    {
-        if (!registered_fs.count(feat_set_opt))
-        { // returns 1 if is in the map, 0 oterhwise
-            feat_set_opt = "default";
-        }
-        fe->setFeatureSet(feat_set_opt);
-    }
-*/
-
-
-    /*
-    if (param->verbose)
-    {
-        cout << "feature-evaluation-technique: " << feat_eval_opt << endl;
-        cout << "feature-set: " << fe->getFeatureSet()->getName() << endl;
-    }
-    */
+    // Module loading
+    std::unique_ptr<Module> module_ptr = load_module(context, param->filename, param->verbose);
     
-    if (param->verbose)
-        cout << "loading module from file" << endl;
-    
-    std::unique_ptr<Module> module_ptr = load_module(context, param->filename);
-    
-
     // Pass management with the new pass pipeline
     PassInstrumentationCallbacks PIC;
     StandardInstrumentations SI(true, false);
     SI.registerCallbacks(PIC);  
-    PassBuilder PB(false,nullptr,llvm::PipelineTuningOptions(),llvm::None, &PIC);    
+    PassBuilder PB(false, nullptr, llvm::PipelineTuningOptions(), llvm::None, &PIC);    
     Expected<PassPlugin> PassPlugin = PassPlugin::Load("./libfeature_pass.so");
     if (!PassPlugin) {
       errs() << "Failed to load passes from libfeature_pass.so plugin\n";
-      errs() << "Problem with division " << toString(std::move(PassPlugin.takeError())) ;
+      errs() << "Problem while loading libfeature_pass: " << toString(std::move(PassPlugin.takeError())) ;
       errs() << "\n";
       return 1;
     }
@@ -242,10 +136,9 @@ int main(int argc, char *argv[]) {
     ModulePassManager MPM(true);
  
     // Run!
-    cout << "pre run" << endl;
+    if(param->verbose) cout << "Pass manager run.." << endl;
     MPM.run(*module_ptr, MAM); 
-    cout << "post run" << endl;
+    if(param->verbose) cout << "Pass manager run completed" << endl;
 
-    exit(0);
     return 0;
 } // end main
