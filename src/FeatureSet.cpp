@@ -15,9 +15,9 @@ FeatureSet::~FeatureSet(){}
 
 void FeatureSet::print(llvm::raw_ostream &out_stream){
     out_stream << "raw values\n";
-    print_feature<unsigned>(raw, out_stream);
+    print_features<unsigned>(raw, out_stream);
     out_stream << "feature values\n";
-    print_feature<float>(feat, out_stream);
+    print_features<float>(feat, out_stream);
 }
 
 /* this version handles different Function 

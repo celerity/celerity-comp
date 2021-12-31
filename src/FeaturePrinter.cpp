@@ -15,6 +15,6 @@ using namespace celerity;
 llvm::PreservedAnalyses FeaturePrinterPass::run(llvm::Function &fun, llvm::FunctionAnalysisManager &fam){
     out_stream << "Function: " << fun.getName() << "\n";    
     auto &feature_set = fam.getResult<FeatureAnalysis>(fun);    
-    print_feature(feature_set, out_stream);
+    print_features(feature_set, out_stream);
     return PreservedAnalyses::all();
 }

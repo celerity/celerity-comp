@@ -1,11 +1,15 @@
 #pragma once
 
+
+#include <llvm/IR/PassManager.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/BasicBlock.h>
 
-#include "FeatureSet.hpp"
 
 using namespace llvm;
+
+#include "FeatureSet.hpp"
+
 
 namespace celerity {
 
@@ -17,7 +21,7 @@ using ResultFeatureAnalysis = llvm::StringMap<float>;
 struct FeatureAnalysis : public llvm::AnalysisInfoMixin<FeatureAnalysis> {
 
  protected:
-    FeatureSet * features;
+    FeatureSet *features;
     // TODO normalization must handled here in the samo way (Normalization)
     
  public:
@@ -50,7 +54,23 @@ struct FeatureAnalysis : public llvm::AnalysisInfoMixin<FeatureAnalysis> {
   private:
     static llvm::AnalysisKey Key;
     friend struct llvm::AnalysisInfoMixin<FeatureAnalysis>;
+   
 
+}; // end FeatureAnalysis
+
+
+struct FeatureAnalysisParam { 
+  FeatureSetOptions feature_set; 
+  string analysis; 
+  string normalization; 
+  string filename;
+  bool help;
+  bool verbose;
 };
+
+/// utility for parsing command line and plugin params
+llvm::Expected<FeatureAnalysisParam> parseAnalysisArguments(std::string &arguments, bool printErrors, bool passNameCheck);
+llvm::Expected<FeatureAnalysisParam> parseAnalysisArguments(int argc, char **argv,  bool printErrors, bool passNameCheck);
+
 
 } // end namespace celerity

@@ -25,9 +25,7 @@ using namespace llvm;
 #include "FeaturePrinter.hpp"
 using namespace celerity;
 
-
-llvm::Module *load_module(std::ifstream &stream);
-
+/*
 // Helper class to parse command line arguments.
 class ArgumentParser
 {
@@ -63,7 +61,7 @@ public:
 private:
     std::vector<string> tokens;
 };
-
+*/
 /// function to load a module from file
 std::unique_ptr<Module> load_module(LLVMContext &context, const std::string &fileName) {
     SMDiagnostic error;
@@ -78,8 +76,9 @@ std::unique_ptr<Module> load_module(LLVMContext &context, const std::string &fil
     cout << " complete" << endl;
     return module;
 }
-
+/*
 string usage = "Celerity Feature Extractor\nUSAGE:\n\t-h help\n\t-i <kernel bitcode file>\n\t-o <output file>\n\t-fe <feature eval={default|kofler13|polfeat}>\n\t-v verbose\n";
+*/
 bool verbose = false;
 int optimization_level = 1;
 
@@ -88,6 +87,13 @@ int main(int argc, char *argv[]) {
     InitLLVM X(argc, argv);
     LLVMContext context;
 
+    Expected<FeatureAnalysisParam> param = parseAnalysisArguments(argc, argv, true, false);
+    if(!param){
+        cerr << "params not set\n";
+        exit(0);
+    }
+
+/*
     FeatureSetRegistry &registered_fs = FeatureSetRegistry::getInstance();
     string fs_names = "\t-fs <feature set={";
     for (auto key : registered_fs.keys())
@@ -145,17 +151,21 @@ int main(int argc, char *argv[]) {
         }
         fe->setFeatureSet(feat_set_opt);
     }
+*/
 
-    if (verbose)
+
+    /*
+    if (param->verbose)
     {
         cout << "feature-evaluation-technique: " << feat_eval_opt << endl;
         cout << "feature-set: " << fe->getFeatureSet()->getName() << endl;
     }
-
-    if (verbose)
+    */
+    
+    if (param->verbose)
         cout << "loading module from file" << endl;
     
-    std::unique_ptr<Module> module_ptr = load_module(context, fileName);
+    std::unique_ptr<Module> module_ptr = load_module(context, param->filename);
     
 
     // Pass management with the new pass pipeline

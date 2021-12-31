@@ -8,7 +8,11 @@ using namespace std;
 
 namespace celerity {
 
+// Supported feature sets
+enum FeatureSetOptions { fan19, grewe13, full };
+
 /// A set of feature, including both raw values and normalized ones. 
+/// Abstract class, with different subslasses
 class FeatureSet {
 public:
     llvm::StringMap<unsigned> raw;
@@ -51,7 +55,6 @@ public:
         instructionNum[func] += 1;
         instructionTotContrib[func] += contribution;
     }	
-    
     
     void eval(llvm::Instruction &inst, int contribution = 1) {
         llvm::Function *func = inst.getFunction();
@@ -151,30 +154,40 @@ struct FeatureSetRegistry : public llvm::StringMap<FeatureSet*> {
 };
 
 /// Printing functions
+
+/// Print all features in a nicely formatted table
 template <typename T>
-void print_feature(llvm::StringMap<T> &feature_map, llvm::raw_ostream &out_stream){
+void print_features(llvm::StringMap<T> &feature_map, llvm::raw_ostream &out_stream){
     auto keys = feature_map.keys();
     for(auto f : keys){
         out_stream << "  " << f <<": " << feature_map[f] << "\n";
     }
 }
 
+
+/// Print all feature names in one line
 template <typename T>
-void print_feature_name(llvm::StringMap<T> &feature_map, llvm::raw_ostream &out_stream){
+void print_feature_names(llvm::StringMap<T> &feature_map, llvm::raw_ostream &out_stream){
     auto keys = feature_map.keys();
     for(auto f : keys){
-        out_stream << "  " << f;
+        out_stream << f << "  ";
     }
      out_stream << "\n";
 }
 
+
+/// Print all feature values in one line
 template <typename T>
-void print_feature_val(llvm::StringMap<T> &feature_map, llvm::raw_ostream &out_stream){
+void print_feature_values(llvm::StringMap<T> &feature_map, llvm::raw_ostream &out_stream){
     auto keys = feature_map.keys();
     for(auto f : keys){
-        out_stream << "  " << feature_map[f];
+        out_stream << feature_map[f] << "  ";
     }
      out_stream << "\n";
 }
+
+
+
+
 
 } // end namespace celerity

@@ -32,8 +32,8 @@ set(FEATURE_INCLUDE
   include/KernelInvariant.hpp  include/Kofler13Analysis.hpp)
 
 set(FEATURE_SRC 
-  src/FeatureAnalysis.cpp   src/FeaturePrinter.cpp  
-  src/FeatureSet.cpp        src/Kofler13Analysis.cpp)
+  src/FeatureSet.cpp  src/FeaturePrinter.cpp        
+  src/FeatureAnalysis.cpp src/Kofler13Analysis.cpp)
 
 if(POLFEAT)
   set(FEATURE_INCLUDE ${FEATURE_INCLUDE}  include/PolFeatAnalysis.hpp)
