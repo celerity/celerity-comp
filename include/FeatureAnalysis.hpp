@@ -68,9 +68,5 @@ struct FeatureAnalysisParam {
   bool verbose;
 };
 
-/// utility for parsing command line and plugin params
-llvm::Expected<FeatureAnalysisParam> parseAnalysisArguments(std::string &arguments, bool printErrors, bool passNameCheck);
-llvm::Expected<FeatureAnalysisParam> parseAnalysisArguments(int argc, char **argv,  bool printErrors, bool passNameCheck);
-
 
 } // end namespace celerity

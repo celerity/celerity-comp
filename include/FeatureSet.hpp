@@ -127,6 +127,27 @@ const unsigned globalAddressSpace  = 2;
 enum class AddressSpaceType { Private, Local, Global, Unknown };
 AddressSpaceType checkAddrSpace(const unsigned addrSpaceId);
 
+/*
+template <typename T>
+struct Registry : public llvm::StringMap<T*> {
+    Registry(){}
+    ~Registry(){}    
+ public:
+    Registry(StaticRegistry const&) = delete;
+    void operator=(StaticRegistry const&) = delete;
+    
+    static StaticRegistry& getInstance() {
+        static StaticRegistry instance; // Guaranteed to be destroyed. Instantiated on first use.
+        return instance;
+    }
+
+    T get(const llvm::String &name){
+        return this->operator[name];
+    }
+  
+
+}; */
+
 
 /// A registry containing all supported feature sets. Singleton struct
 struct FeatureSetRegistry : public llvm::StringMap<FeatureSet*> {
@@ -135,7 +156,6 @@ struct FeatureSetRegistry : public llvm::StringMap<FeatureSet*> {
         (*this)["grewe11"] = new Grewe11FeatureSet();
         (*this)["fan19"] = new Fan19FeatureSet();
         (*this)["full"] =  new FullFeatureSet();
-        (*this)["default"] = new Fan19FeatureSet();
     }
 
     ~FeatureSetRegistry(){     
@@ -185,8 +205,6 @@ void print_feature_values(llvm::StringMap<T> &feature_map, llvm::raw_ostream &ou
     }
      out_stream << "\n";
 }
-
-
 
 
 

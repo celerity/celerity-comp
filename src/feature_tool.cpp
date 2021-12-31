@@ -25,43 +25,86 @@ using namespace llvm;
 #include "FeaturePrinter.hpp"
 using namespace celerity;
 
+
+
+/// utility for parsing command line and plugin params
+//llvm::Expected<FeatureAnalysisParam> parseAnalysisArguments(std::string &arguments, bool printErrors, bool passNameCheck);
+//llvm::Expected<FeatureAnalysisParam> parseAnalysisArguments(int argc, char **argv,  bool printErrors, bool passNameCheck);
+//-----------------------------------------------------------------------------
+// Command line parsing
+//-----------------------------------------------------------------------------
+
+// fset={...} supported feature sets
+cl::opt<FeatureSetOptions> FSet("fset", cl::desc("Specify the feature set:"),
+                                cl::values(
+                                    clEnumVal(fan19, "Default feature set for GPU used in [Fan et al. ICPP 19]"),
+                                    clEnumVal(grewe13, "Feature set used in pGrewe et al. 13]"),
+                                    clEnumVal(full, "Feature set mapping all LLVM IR opcode (very large, hard to cover)")));
+// fanal={...} supported feature analyses
+cl::opt<string> FAnal("fanal", cl::desc("Specify the feature analysis algorithm"), cl::value_desc("feature_analysis"), cl::init("default"));
+// fnorm={...} supported normalization
+cl::opt<string> FNorm("fnorm", cl::desc("Specify the feature normalization algorithm"), cl::value_desc("feature_norm"), cl::init("default"));
+// in case of standalone tool (no opt), we need a positional param for the input IR file
+cl::opt<string> IRFilename(cl::Positional, cl::desc("<input_bitcode_file>"), cl::Required);
+// help
+//cl::opt<bool> Help("h", cl::desc("Enable binary output on terminals"), cl::init(false));
+// verbose
+cl::opt<bool> Verbose("v", cl::desc("Verbose"), cl::init(false));
+
+
 /*
-// Helper class to parse command line arguments.
-class ArgumentParser
+Expected<FeatureAnalysisParam> parseAnalysisArguments(string &arguments, bool printErrors, bool passNameCheck)
 {
-public:
-    ArgumentParser(int &argc, char **argv)
+  // string to argv and argc
+  bool first_space = true;
+  bool first_char = true;
+  std::vector<unsigned> argv_index;
+  string argv_copy = arguments + " ";
+  // from string to argv and argc
+  for (int i = 0; i < argv_copy.size(); i++)
+  {
+    char &current_char = argv_copy[i];
+    if (current_char == ' ')
     {
-        for (int i = 1; i < argc; ++i)
-        {
-            tokens.push_back(std::string(argv[i]));
-        }
-    }
-    string getCmdOption(const string &option) const
+      if (first_space)
+        current_char = '\n';
+      first_space = false;
+      first_char = true;
+    } // not a space
+    else
     {
-        for (int i = 0; i < tokens.size(); i++)
-        {
-            if (tokens[i] == option)
-                if (i + 1 < tokens.size())
-                    return tokens[i + 1];
-        }
-        return std::string(); // empty string
+      if (first_char)
+        argv_index.push_back(i);
+      first_char = false;
+      first_space = true;
     }
-
-    bool cmdOptionExists(const string &option) const
-    {
-        for (string s : tokens)
-        {
-            if (s == option)
-                return true;
-        }
-        return false;
-    }
-
-private:
-    std::vector<string> tokens;
-};
+  }
+  char str[1024];
+  strncpy(str, argv_copy.c_str(), 1024);
+  int argc = argv_index.size();
+  char *argv[1024];
+  for (int i = 0; i < argc; i++)
+    argv[i] = str + argv_index[i];
+  return parseAnalysisArguments(argc, argv, printErrors, passNameCheck);
+}
 */
+
+Expected<FeatureAnalysisParam> parseAnalysisArguments(int argc, char **argv, bool printErrors)
+{
+  // LLVM command line parser
+  cl::ParseCommandLineOptions(argc, argv);
+
+  // if we are using the extractor tool, we need the input file
+  FeatureAnalysisParam param = {FeatureSetOptions::fan19, "default", "no-norm", "", false, false};
+  param.feature_set = FSet;
+  param.analysis = FAnal;
+  param.normalization = FNorm;
+  param.filename = IRFilename;
+  //param.help = Help;
+  param.verbose = Verbose;
+  return param;
+}
+
 /// function to load a module from file
 std::unique_ptr<Module> load_module(LLVMContext &context, const std::string &fileName) {
     SMDiagnostic error;
@@ -76,6 +119,7 @@ std::unique_ptr<Module> load_module(LLVMContext &context, const std::string &fil
     cout << " complete" << endl;
     return module;
 }
+
 /*
 string usage = "Celerity Feature Extractor\nUSAGE:\n\t-h help\n\t-i <kernel bitcode file>\n\t-o <output file>\n\t-fe <feature eval={default|kofler13|polfeat}>\n\t-v verbose\n";
 */
@@ -87,7 +131,7 @@ int main(int argc, char *argv[]) {
     InitLLVM X(argc, argv);
     LLVMContext context;
 
-    Expected<FeatureAnalysisParam> param = parseAnalysisArguments(argc, argv, true, false);
+    Expected<FeatureAnalysisParam> param = parseAnalysisArguments(argc, argv, true);
     if(!param){
         cerr << "params not set\n";
         exit(0);
@@ -197,8 +241,6 @@ int main(int argc, char *argv[]) {
     PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
     ModulePassManager MPM(true);
  
-    //cl::PrintOptionValues();
-
     // Run!
     cout << "pre run" << endl;
     MPM.run(*module_ptr, MAM); 
