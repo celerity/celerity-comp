@@ -27,13 +27,13 @@ option(CELERITY_RUNTIME "Install the integration layer for Celerity (requires ex
 
 # sources
 set(FEATURE_INCLUDE 
-  include/FeatureAnalysis.hpp  include/FeatureNormalization.hpp  
-  include/FeaturePrinter.hpp   include/FeatureSet.hpp  
-  include/KernelInvariant.hpp  include/Kofler13Analysis.hpp)
+  include/FeaturePrinter.hpp   include/FeatureSet.hpp       include/KernelInvariant.hpp  
+  include/FeatureAnalysis.hpp  include/Kofler13Analysis.hpp include/DefaultFeatureAnalysis.hpp
+  include/FeatureNormalization.hpp )
 
 set(FEATURE_SRC 
-  src/FeatureSet.cpp  src/FeaturePrinter.cpp        
-  src/FeatureAnalysis.cpp src/Kofler13Analysis.cpp)
+  src/FeatureSet.cpp           src/FeaturePrinter.cpp        
+  src/FeatureAnalysis.cpp      src/Kofler13Analysis.cpp     src/DefaultFeatureAnalysis.cpp )
 
 if(POLFEAT)
   set(FEATURE_INCLUDE ${FEATURE_INCLUDE}  include/PolFeatAnalysis.hpp)

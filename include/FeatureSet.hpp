@@ -2,6 +2,7 @@
 
 #include <string>
 #include <iostream>
+#include <sstream>
 using namespace std;
 
 #include <llvm/IR/Instructions.h>
@@ -183,9 +184,11 @@ using FSRegistry = Registry<celerity::FeatureSet*>;
 template <typename T>
 void print_features(llvm::StringMap<T> &feature_map, llvm::raw_ostream &out_stream){
     auto keys = feature_map.keys();
-    for(auto f : keys){
-        out_stream << "  " << f <<": " << feature_map[f] << "\n";
+    stringstream ss;
+    for(StringRef &f : keys){
+        ss << "  " << f.str() <<": " << feature_map[f] << "\n";
     }
+    out_stream << ss.str();
 }
 
 
@@ -193,10 +196,12 @@ void print_features(llvm::StringMap<T> &feature_map, llvm::raw_ostream &out_stre
 template <typename T>
 void print_feature_names(llvm::StringMap<T> &feature_map, llvm::raw_ostream &out_stream){
     auto keys = feature_map.keys();
-    for(auto f : keys){
-        out_stream << f << "  ";
+    stringstream ss;
+    for(StringRef &f : keys){
+        ss << /*ss.width(9) << ss.fill(' ') <<*/ f.str() << " ";
     }
-     out_stream << "\n";
+    ss << "\n";
+    out_stream << ss.str();
 }
 
 
@@ -204,10 +209,12 @@ void print_feature_names(llvm::StringMap<T> &feature_map, llvm::raw_ostream &out
 template <typename T>
 void print_feature_values(llvm::StringMap<T> &feature_map, llvm::raw_ostream &out_stream){
     auto keys = feature_map.keys();
-    for(auto f : keys){
-        out_stream << feature_map[f] << "  ";
+    stringstream ss;    
+    for(StringRef &f : keys){
+        ss << /*ss.width(7) << ss.fill(' ') <<*/ feature_map[f] << " ";
     }
-     out_stream << "\n";
+    ss << "\n";
+    out_stream << ss.str();
 }
 
 

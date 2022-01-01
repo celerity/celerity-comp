@@ -10,15 +10,14 @@ using namespace llvm;
 
 namespace celerity {
 
-//using ResultFeatureAnalysis = llvm::StringMap<float>;
+/// Results of a feature analysis
 struct ResultFeatureAnalysis {
   llvm::StringMap<unsigned> raw;
   llvm::StringMap<float> feat;
 };
 
-/// An LLVM analysisfunction pass that extract static code features. 
+/// Abstract class for analyses that extract static code features. 
 /// The extraction of features from a single instruction is delegated to a feature set class.
-/// In this basic implementation, BB's instruction contributions are summed up.
 struct FeatureAnalysis : public llvm::AnalysisInfoMixin<FeatureAnalysis> {
 
  protected:
@@ -53,11 +52,10 @@ struct FeatureAnalysis : public llvm::AnalysisInfoMixin<FeatureAnalysis> {
   private:
     static llvm::AnalysisKey Key;
     friend struct llvm::AnalysisInfoMixin<FeatureAnalysis>;   
-    //friend struct FeaturePrinterPass; //?
 
 }; // end FeatureAnalysis
 
-
+/// struct used for keeping analysis arguments in command line
 struct FeatureAnalysisParam { 
   FeatureSetOptions feature_set; 
   string analysis; 

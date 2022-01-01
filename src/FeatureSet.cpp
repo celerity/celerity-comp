@@ -209,7 +209,7 @@ AddressSpaceType celerity::checkAddrSpace(const unsigned addrSpaceId) {
 static celerity::FeatureSet* _static_fs_1_ = new celerity::Fan19FeatureSet();
 static bool _registered_fset_1_ = FSRegistry::registerByKey("fan19", _static_fs_1_ ); 
 static celerity::FeatureSet* _static_fs_2_ = new celerity::Grewe11FeatureSet();
-static bool _registered_fset_2_ = FSRegistry::registerByKey("fan19", _static_fs_2_ ); 
+static bool _registered_fset_2_ = FSRegistry::registerByKey("grewe11", _static_fs_2_ ); 
 static celerity::FeatureSet* _static_fs_3_ = new celerity::FullFeatureSet();
-static bool _registered_fset_3_ = FSRegistry::registerByKey("fan19", _static_fs_3_ ); 
+static bool _registered_fset_3_ = FSRegistry::registerByKey("full", _static_fs_3_ ); 
 

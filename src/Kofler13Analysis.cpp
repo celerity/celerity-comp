@@ -15,6 +15,7 @@ using namespace llvm;
 #include "FeatureNormalization.hpp"
 using namespace celerity;
 
+//llvm::AnalysisKey Kofler13Analysis::Key;
 
 /// Feature extraction based on Kofler et al. 13 loop heuristics
 /// Requires LoopAnalysis and ScalarEvolutionAnalysis.
@@ -126,6 +127,5 @@ int Kofler13Analysis::loopContribution(const llvm::Loop &loop, ScalarEvolution &
 //-----------------------------------------------------------------------------
 // Register the Kofler13 analysis in the FeatureAnalysis registry
 //-----------------------------------------------------------------------------
-//using FARegistry = celerity::Registry<celerity::FeatureAnalysis*>;
-static celerity::FeatureAnalysis* _static_fa_ptr_ = new celerity::Kofler13Analysis; // dynamic_cast<celerity::FeatureAnalysis*>(&_static_fa_);
-static bool _registered_feature_analysis_ = FARegistry::registerByKey("kofler13", _static_fa_ptr_ ); 
+static celerity::FeatureAnalysis* _static_kfa_ptr_ = new celerity::Kofler13Analysis; // dynamic_cast<celerity::FeatureAnalysis*>(&_static_fa_);
+static bool _registered_feature_analysis_ = FARegistry::registerByKey("kofler13", _static_kfa_ptr_ ); 
