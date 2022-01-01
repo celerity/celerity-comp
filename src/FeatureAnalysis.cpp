@@ -40,13 +40,14 @@ void FeatureAnalysis::finalize()
   normalize(*features);
 }
 
-FeatureAnalysis::Result FeatureAnalysis::run(llvm::Function &fun, llvm::FunctionAnalysisManager &fam)
+ResultFeatureAnalysis FeatureAnalysis::run(llvm::Function &fun, llvm::FunctionAnalysisManager &fam)
 {
-  std::cout << "analysis for function: " << fun.getName().str() << "\n";
-  std::cout << "feature-set: " << features->getName() << "\n";
+  outs() << "analysis for function: " << fun.getName().str() 
+    << " feature-set: " << features->getName()
+    << " analysis-name: " << getName() << "\n";
   extract(fun, fam);
   finalize();
-  return features->getFeatureValues();
+  return ResultFeatureAnalysis { features->getFeatureCounts(), features->getFeatureValues() };
 }
 
 /*

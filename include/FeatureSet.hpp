@@ -28,9 +28,8 @@ public:
     FeatureSet(string feature_set_name) : name(feature_set_name){}
     virtual ~FeatureSet();
 
-    llvm::StringMap<float> getFeatureValues(){
-        return feat;
-    }
+    llvm::StringMap<unsigned> getFeatureCounts(){ return raw; }
+    llvm::StringMap<float> getFeatureValues(){ return feat; }
 
     string getName(){
         return name;

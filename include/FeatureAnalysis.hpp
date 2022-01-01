@@ -10,7 +10,11 @@ using namespace llvm;
 
 namespace celerity {
 
-using ResultFeatureAnalysis = llvm::StringMap<float>;
+//using ResultFeatureAnalysis = llvm::StringMap<float>;
+struct ResultFeatureAnalysis {
+  llvm::StringMap<unsigned> raw;
+  llvm::StringMap<float> feat;
+};
 
 /// An LLVM analysisfunction pass that extract static code features. 
 /// The extraction of features from a single instruction is delegated to a feature set class.
@@ -19,19 +23,19 @@ struct FeatureAnalysis : public llvm::AnalysisInfoMixin<FeatureAnalysis> {
 
  protected:
     FeatureSet *features;
+    string analysis_name;
     // TODO normalization must handled here in the samo way (Normalization)
     
  public:
-    FeatureAnalysis(string feature_set = "fan19"){      
+    FeatureAnalysis(string feature_set = "fan19") : analysis_name("default") {      
       features = FSRegistry::dispatch(feature_set);      
     }
     virtual ~FeatureAnalysis();
 
     /// this methods allow to change the underlying feature set
-    void setFeatureSet(string &feature_set){
-        features = FSRegistry::dispatch(feature_set);      
-    }
+    void setFeatureSet(string &feature_set){ features = FSRegistry::dispatch(feature_set); }
     FeatureSet * getFeatureSet(){ return features; }
+    string getName(){ return analysis_name; }
 
     /// runs the analysis on a specific function, returns a StringMap
     using Result = ResultFeatureAnalysis;

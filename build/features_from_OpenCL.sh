@@ -18,6 +18,6 @@ opt-12 -load-pass-plugin ./libfeature_pass.so  --passes="print<feature>" -disabl
 
 echo
 echo "$(tput setaf 1) Feature extraction from LLVM IR with the extractor utility $(tput sgr 0)"
-./feature_ext -i samples/vecadd.bc
-./feature_ext -i samples/vecadd.bc -fe kofler13   
+feature_ext -i samples/vecadd.bc
+feature_ext -i samples/vecadd.bc -fe kofler13   
 

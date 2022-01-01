@@ -27,7 +27,7 @@ struct Kofler13Analysis : public FeatureAnalysis {
    const int default_loop_contribution = 100;
 
  public:
-    Kofler13Analysis() : FeatureAnalysis() {}
+    Kofler13Analysis() : FeatureAnalysis() { analysis_name="kofler13"; }
     virtual ~Kofler13Analysis(){}
 
     /// overwrite feature extraction for function

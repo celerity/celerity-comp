@@ -204,7 +204,7 @@ AddressSpaceType celerity::checkAddrSpace(const unsigned addrSpaceId) {
 }
 
 //-----------------------------------------------------------------------------
-// Register the feature set in the FeatureSet registry
+// Register the available feature sets in the FeatureSet registry
 //-----------------------------------------------------------------------------
 static celerity::FeatureSet* _static_fs_1_ = new celerity::Fan19FeatureSet();
 static bool _registered_fset_1_ = FSRegistry::registerByKey("fan19", _static_fs_1_ ); 

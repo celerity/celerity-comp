@@ -32,9 +32,15 @@ struct FeaturePrinterPass : public llvm::PassInfoMixin<celerity::FeaturePrinterP
    explicit FeaturePrinterPass(llvm::raw_ostream &stream) : out_stream(stream) {}
 
    llvm::PreservedAnalyses run(llvm::Function &fun, llvm::FunctionAnalysisManager &fam) {
-      out_stream << "Function: " << fun.getName() << "\n";    
-      auto &feature_set = fam.getResult<AnalysisType>(fun);    
-      print_features(feature_set, out_stream);
+      out_stream.changeColor(llvm::raw_null_ostream::Colors::MAGENTA);
+      out_stream << "Print feature for function: " << fun.getName() << "\n";
+      out_stream.changeColor(llvm::raw_null_ostream::Colors::YELLOW);    
+      ResultFeatureAnalysis &feature_set = fam.getResult<AnalysisType>(fun);    
+      out_stream.changeColor(llvm::raw_null_ostream::Colors::WHITE, true);
+      print_feature_names(feature_set.feat, out_stream);
+      out_stream.changeColor(llvm::raw_null_ostream::Colors::WHITE, false);
+      print_feature_values(feature_set.raw, out_stream);
+      print_feature_values(feature_set.feat, out_stream);
       return PreservedAnalyses::all();
    }
 
