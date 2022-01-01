@@ -6,6 +6,8 @@ using namespace std;
 
 #include <llvm/IR/Instructions.h>
 
+#include "Registry.hpp"
+
 namespace celerity {
 
 // Supported feature sets
@@ -148,7 +150,7 @@ struct Registry : public llvm::StringMap<T*> {
 
 }; */
 
-
+/*
 /// A registry containing all supported feature sets. Singleton struct
 struct FeatureSetRegistry : public llvm::StringMap<FeatureSet*> {
  private:
@@ -172,6 +174,9 @@ struct FeatureSetRegistry : public llvm::StringMap<FeatureSet*> {
         return instance;
     }
 };
+*/
+
+using FSRegistry = Registry<celerity::FeatureSet*>;
 
 /// Printing functions
 
@@ -205,7 +210,6 @@ void print_feature_values(llvm::StringMap<T> &feature_map, llvm::raw_ostream &ou
     }
      out_stream << "\n";
 }
-
 
 
 } // end namespace celerity

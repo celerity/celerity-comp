@@ -1,8 +1,6 @@
 #pragma once
 
 #include <list>
-//#include <functional>
-#include <type_traits>
 
 #include <llvm/ADT/StringMap.h>
 
@@ -24,10 +22,13 @@ namespace celerity
     template <typename... Args>
     static T dispatch(const llvm::StringRef &key, Args &&...args)
     {
+      return map()[key]; 
+      /*
       auto it = map().find(key);
       if (it == map().end())
         return T();
       return it->second(std::forward<Args>(args)...);
+      */
     }
 
     /// Register a T value for the string key
@@ -50,7 +51,6 @@ namespace celerity
         key_list.push_back(s);
       return key_list; 
     } 
-    
 
   private:
     static llvm::StringMap<T> &map()

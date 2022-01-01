@@ -12,8 +12,9 @@ using namespace std;
 using namespace llvm;
 
 #include "FeatureAnalysis.hpp"
+#include "Kofler13Analysis.hpp"
 #include "FeaturePrinter.hpp"
-#include "FeatureNormalization.hpp"
+//#include "FeatureNormalization.hpp"
 using namespace celerity;
 
 llvm::AnalysisKey FeatureAnalysis::Key;
@@ -86,8 +87,7 @@ bool FeaturePass::runOnSCC(CallGraphSCC &SCC) {
 //-----------------------------------------------------------------------------
 // Register the analysis in a FeatureAnalysis registry
 //-----------------------------------------------------------------------------
-using FARegistry = celerity::Registry<celerity::FeatureAnalysis*>;
-static celerity::FeatureAnalysis _static_fa_();
+//static celerity::FeatureAnalysis _static_fa_();
 static celerity::FeatureAnalysis* _static_fa_ptr_ = new celerity::FeatureAnalysis; // dynamic_cast<celerity::FeatureAnalysis*>(&_static_fa_);
 static bool _registered_feature_analysis_ = FARegistry::registerByKey("default", _static_fa_ptr_ ); 
 
@@ -110,7 +110,8 @@ llvm::PassPluginLibraryInfo getFeatureExtractionPassPluginInfo()
               if (Name == "print<feature>")
               {
                 outs() << "   * FeaturePrinterPass registration - " << Name << "\n";
-                FPM.addPass(FeaturePrinterPass(llvm::errs()));
+                FPM.addPass(FeaturePrinterPass<FeatureAnalysis>(llvm::errs()));
+                FPM.addPass(FeaturePrinterPass<Kofler13Analysis>(llvm::errs()));
                 return true;
               }
               return false;
@@ -120,16 +121,18 @@ llvm::PassPluginLibraryInfo getFeatureExtractionPassPluginInfo()
         PB.registerVectorizerStartEPCallback(
             [](llvm::FunctionPassManager &PM, llvm::PassBuilder::OptimizationLevel Level)
             {
-              PM.addPass(FeaturePrinterPass(llvm::errs()));
+              PM.addPass(FeaturePrinterPass<FeatureAnalysis>(llvm::errs()));
+              PM.addPass(FeaturePrinterPass<Kofler13Analysis>(llvm::errs()));
             });
         // #3 REGISTRATION FOR "FAM.getResult<FeatureAnalysis>(Func)"
         // Register FeatureAnalysis as an analysis pass, so that FeaturePrinterPass can request the results of FeatureAnalysis.
         PB.registerAnalysisRegistrationCallback(
             [](FunctionAnalysisManager &FAM)
             {
-              FAM.registerPass([&]
-                               { return FeatureAnalysis(); });
+              FAM.registerPass([&] { return FeatureAnalysis(); });
+              FAM.registerPass([&] { return Kofler13Analysis(); });
             });
+
       }};
 }
 

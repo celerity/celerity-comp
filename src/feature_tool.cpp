@@ -17,6 +17,7 @@ using namespace std;
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/ErrorHandling.h>
 #include <llvm/Support/InitLLVM.h>
+//#include <llvm/Support/DynamicLibrary.h>
 using namespace llvm;
 
 #include "FeatureSet.hpp"
@@ -106,6 +107,8 @@ int main(int argc, char *argv[]) {
     // Module loading
     std::unique_ptr<Module> module_ptr = load_module(context, param->filename, param->verbose);
     
+    //DynamicLibrary::
+
     // Pass management with the new pass pipeline
     PassInstrumentationCallbacks PIC;
     StandardInstrumentations SI(true, false);

@@ -22,16 +22,14 @@ struct FeatureAnalysis : public llvm::AnalysisInfoMixin<FeatureAnalysis> {
     // TODO normalization must handled here in the samo way (Normalization)
     
  public:
-    FeatureAnalysis(){
-      FeatureSetRegistry &registry = FeatureSetRegistry::getInstance();
-      features = registry["default"];
+    FeatureAnalysis(string feature_set = "fan19"){      
+      features = FSRegistry::dispatch(feature_set);      
     }
     virtual ~FeatureAnalysis();
 
     /// this methods allow to change the underlying feature set
-    void setFeatureSet(string &featureSetName){
-        FeatureSetRegistry &registry = FeatureSetRegistry::getInstance();
-        features = registry[featureSetName];
+    void setFeatureSet(string &feature_set){
+        features = FSRegistry::dispatch(feature_set);      
     }
     FeatureSet * getFeatureSet(){ return features; }
 
@@ -51,6 +49,7 @@ struct FeatureAnalysis : public llvm::AnalysisInfoMixin<FeatureAnalysis> {
   private:
     static llvm::AnalysisKey Key;
     friend struct llvm::AnalysisInfoMixin<FeatureAnalysis>;   
+    //friend struct FeaturePrinterPass; //?
 
 }; // end FeatureAnalysis
 

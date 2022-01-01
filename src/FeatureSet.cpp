@@ -203,3 +203,13 @@ AddressSpaceType celerity::checkAddrSpace(const unsigned addrSpaceId) {
     }
 }
 
+//-----------------------------------------------------------------------------
+// Register the feature set in the FeatureSet registry
+//-----------------------------------------------------------------------------
+static celerity::FeatureSet* _static_fs_1_ = new celerity::Fan19FeatureSet();
+static bool _registered_fset_1_ = FSRegistry::registerByKey("fan19", _static_fs_1_ ); 
+static celerity::FeatureSet* _static_fs_2_ = new celerity::Grewe11FeatureSet();
+static bool _registered_fset_2_ = FSRegistry::registerByKey("fan19", _static_fs_2_ ); 
+static celerity::FeatureSet* _static_fs_3_ = new celerity::FullFeatureSet();
+static bool _registered_fset_3_ = FSRegistry::registerByKey("fan19", _static_fs_3_ ); 
+
