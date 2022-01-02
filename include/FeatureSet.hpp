@@ -84,20 +84,20 @@ public:
     }
     */
 
-    //virtual float get_feature(string &feature_name){ return feat[feature_name]; }
     string get_type_prefix(const llvm::Instruction &inst);
+    
     void print(llvm::raw_ostream &out_stream);    
-    //void print_to_file(const string&);
+    
     void normalize();
 
 protected:
-    /* Abstract method that evaluates an llvm instruction in terms of feature representation. */
+    /// Abstract method that evaluates an llvm instruction in terms of feature representation. 
     virtual string eval_instruction(const llvm::Instruction &inst, int contribution = 1) = 0;
     
 };
 
 
-/* Feature set based on Fan's work, specifically designed for GPU architecture. */
+/// Feature set based on Fan's work, specifically designed for GPU architecture. 
 class Fan19FeatureSet : public FeatureSet {
  public:
     Fan19FeatureSet() : FeatureSet("fan19"){}
@@ -129,54 +129,8 @@ const unsigned globalAddressSpace  = 2;
 enum class AddressSpaceType { Private, Local, Global, Unknown };
 AddressSpaceType checkAddrSpace(const unsigned addrSpaceId);
 
-/*
-template <typename T>
-struct Registry : public llvm::StringMap<T*> {
-    Registry(){}
-    ~Registry(){}    
- public:
-    Registry(StaticRegistry const&) = delete;
-    void operator=(StaticRegistry const&) = delete;
-    
-    static StaticRegistry& getInstance() {
-        static StaticRegistry instance; // Guaranteed to be destroyed. Instantiated on first use.
-        return instance;
-    }
-
-    T get(const llvm::String &name){
-        return this->operator[name];
-    }
-  
-
-}; */
-
-/*
-/// A registry containing all supported feature sets. Singleton struct
-struct FeatureSetRegistry : public llvm::StringMap<FeatureSet*> {
- private:
-    FeatureSetRegistry(){        
-        (*this)["grewe11"] = new Grewe11FeatureSet();
-        (*this)["fan19"] = new Fan19FeatureSet();
-        (*this)["full"] =  new FullFeatureSet();
-    }
-
-    ~FeatureSetRegistry(){     
-        for(auto key : keys())
-            delete (*this)[key];
-    }
-
- public:
-    FeatureSetRegistry(FeatureSetRegistry const&) = delete;
-    void operator=(FeatureSetRegistry const&) = delete;
-    
-    static FeatureSetRegistry& getInstance() {
-        static FeatureSetRegistry instance; // Guaranteed to be destroyed. Instantiated on first use.
-        return instance;
-    }
-};
-*/
-
 using FSRegistry = Registry<celerity::FeatureSet*>;
+
 
 /// Printing functions
 

@@ -20,47 +20,9 @@ void FeatureSet::print(llvm::raw_ostream &out_stream){
     print_features<float>(feat, out_stream);
 }
 
-/* this version handles different Function 
-void FeatureSet::print(llvm::raw_ostream &os)){
-    for (const auto& kv : raw) {
-        Function *func = kv.first;
-        if (!raw[func].empty()) {
-            os << "Features for function: " << (func->hasName() ? func->getName().str() : "(anonymous)") << endl;
-            vector<string> feat_names;
-            feat_names.reserve(feat[func].size());
-            for(std::pair<string,float> el : feat[func])	
-                feat_names.push_back(el.first);	
-            std::sort(feat_names.begin(),feat_names.end());
-            // print in alphabetical order
-            os << "name           raw       feat" << endl;
-            for(string &name : feat_names){    
-                string p_name = name;
-                string p_raw  = std::to_string(raw[func][name]);
-                string p_feat = std::to_string(feat[func][name]);
-                p_name.resize(15,' ');
-                p_raw.resize(10,' ');
-                p_feat.resize(10,' ');
-                os << p_name << p_raw << p_feat << endl;	
-            }
-            os << endl;
-        }
-    }
-}*/
-
-/*
-void FeatureSet::print_to_file(const string &out_file){
-	cout << "Writing to file: " << out_file << endl;
-	ofstream outstream;
-	outstream.open (out_file);
-	print(outstream);
-	outstream.close();
-}
-*/
-
 void FeatureSet::normalize(){
 	celerity::normalize(*this);
 }
-
 
 string FeatureSet::get_type_prefix(const llvm::Instruction &inst) {
     Type *t = inst.getType();

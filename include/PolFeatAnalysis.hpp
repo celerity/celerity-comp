@@ -1,4 +1,5 @@
 #pragma once
+#include "KernelInvariant.hpp"
 
 /*  
  * An LLVM pass to extract features using multivariate polynomal as cost relation features.

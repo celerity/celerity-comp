@@ -30,7 +30,7 @@ struct Kofler13Analysis : public FeatureAnalysis {
     // calculate del loop contribution of a given loop (assume non nesting, which is calculated later)
     int loopContribution(const llvm::Loop &loop, ScalarEvolution &SE);
 
-    //static llvm::AnalysisKey Key;
+    static llvm::AnalysisKey Key;
 };
 
 } // end namespace celerity

@@ -15,7 +15,7 @@ using namespace llvm;
 #include "FeatureNormalization.hpp"
 using namespace celerity;
 
-//llvm::AnalysisKey Kofler13Analysis::Key;
+llvm::AnalysisKey Kofler13Analysis::Key;
 
 /// Feature extraction based on Kofler et al. 13 loop heuristics
 /// Requires LoopAnalysis and ScalarEvolutionAnalysis.

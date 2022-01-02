@@ -14,7 +14,7 @@ using namespace llvm;
 #include "FeatureAnalysis.hpp"
 #include "Kofler13Analysis.hpp"
 #include "FeaturePrinter.hpp"
-//#include "FeatureNormalization.hpp"
+#include "KernelInvariant.hpp"
 using namespace celerity;
 
 llvm::AnalysisKey FeatureAnalysis::Key;
@@ -31,6 +31,9 @@ void FeatureAnalysis::extract(BasicBlock &bb)
 
 void FeatureAnalysis::extract(llvm::Function &fun, llvm::FunctionAnalysisManager &fam)
 {
+  KernelInvariant ki(fun);
+  ki.print(llvm::outs());
+  
   for (llvm::BasicBlock &bb : fun)
     extract(bb);
 }
@@ -49,6 +52,7 @@ ResultFeatureAnalysis FeatureAnalysis::run(llvm::Function &fun, llvm::FunctionAn
   finalize();
   return ResultFeatureAnalysis { features->getFeatureCounts(), features->getFeatureValues() };
 }
+
 
 /*
 bool FeaturePass::runOnModule(Module& m) {
