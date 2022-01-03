@@ -23,15 +23,17 @@ namespace celerity {
 ///   subgroups:  "sg"  get_sub_group_size(), get_num_sub_groups()
 enum InvariantType {
     a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, // support up to 10 arguments
-    gs0, gs1, gs2, // global
-    ls0, ls1, ls2, // local
-    nsg, sgs,      // subgroup
+    gs0, gs1, gs2,    // get_global_size(uint dimindx)
+    ng0, ng1, ng2,    // get_num_groups(uint dimindx)
+    ls0, ls1, ls2,    // get_local_size(uint dimindx)
+    nsg, sgs, msgs,   // get_num_sub_groups(), get_sub_group_size(), get_max_sub_group_size
     none // value used for returning invalid invariant
 };
 
 static const char *InvariantTypeName[] = {
     "a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7", "a8", "a9", 
     "gs0", "gs1", "gs2",
+    "ng0", "ng1", "ng2",
     "ls0", "ls1", "ls2",
     "nsg", "sgs"
     "none"
@@ -68,13 +70,14 @@ struct KernelInvariant {
                     StringRef func_call_name =  fun_call->getName();
                     char *demangled; int status;
                     demangled = abi::__cxa_demangle(func_call_name.str().c_str(), 0, 0, &status); 
-                    outs() << "found function named "<< func_call_name;
+                    //outs() << " found fun. call named "<< func_call_name;
                     if(status == 0) {
-                        outs() << ", demangeled name"<< demangled << " (cxa status "<< status<< ")";
+                    //    outs() << ", demangeled name "<< demangled << " (cxa status "<< status<< ")\n";
                     }
-                    else
-                        continue; // if we cannot demangle, let's go to the next instruction
-                    outs() << "\n";    
+                    else {
+                    //    outs() << "\n";
+                        continue; // if we cannot demangle, let's go to the next instruction                    
+                    }
                     // check if the function name contains those we are interesed in
                     std::string fnd = demangled;
                     free(demangled);                   
@@ -95,7 +98,7 @@ struct KernelInvariant {
                                 }                     
                             }
                             else
-                                errs() << "warning: operand for get_global_size not recognized\n";
+                                errs() << "  warning: operand for get_global_size not recognized\n";
                         } // get_global_size
                         if (fnd.rfind("get_local_size", 0) == 0){// we expect something like "get_global_size(0)
                             if(llvm::ConstantInt *int_op = dyn_cast<llvm::ConstantInt>(operand)) {
@@ -110,18 +113,34 @@ struct KernelInvariant {
                                 }                     
                             }
                             else
-                                errs() << "warning: operand for get_local_size not recognized\n";
+                                errs() << "  warning: operand for get_local_size not recognized\n";                        
                         } // get_local_size
+                         if (fnd.rfind("get_num_groups", 0) == 0){// we expect something like "get_global_size(0)
+                            if(llvm::ConstantInt *int_op = dyn_cast<llvm::ConstantInt>(operand)) {
+                                if (int_op->getBitWidth() <= 32) {
+                                    int dim = int_op->getSExtValue();
+                                    switch (dim)
+                                    {
+                                        case 0:  invariants[InvariantType::ng0] =  fun_call; break;
+                                        case 1:  invariants[InvariantType::ng1] =  fun_call; break;
+                                        case 2:  invariants[InvariantType::ng2] =  fun_call; break;                            
+                                    }
+                                }                     
+                            }
+                            else
+                                errs() << "  warning: operand for get_num_groups not recognized\n";                        
+                        } // get_num_groups
+
                     }
                     
                     if(ci->getNumOperands()  == 1){ 
                         if (fnd.rfind("get_num_sub_groups", 0) == 0) 
-                            invariants[InvariantType::nsg] = fun_call;
-                        
+                            invariants[InvariantType::nsg] = fun_call;                        
                         if (fnd.rfind("get_sub_group_size", 0) == 0)
                             invariants[InvariantType::sgs] = fun_call;               
-                    }
-                                  
+                        if (fnd.rfind("get_max_sub_group_size", 0) == 0)
+                            invariants[InvariantType::msgs] = fun_call;
+                    }                                  
                 }
             }
         }
@@ -155,7 +174,7 @@ struct KernelInvariant {
 
     void print(llvm::raw_ostream &out_stream){
         out_stream.changeColor(llvm::raw_null_ostream::Colors::GREEN, true);
-        out_stream << "\nkernel invariants: ";
+        out_stream << "kernel invariants: ";
         out_stream.changeColor(llvm::raw_null_ostream::Colors::WHITE, false);
         for (std::map<InvariantType,llvm::Value*>::iterator it = invariants.begin(); it != invariants.end(); ++it) {
             out_stream << "";

@@ -17,7 +17,7 @@ using namespace llvm;
 #include "KernelInvariant.hpp"
 using namespace celerity;
 
-llvm::AnalysisKey FeatureAnalysis::Key;
+//llvm::AnalysisKey FeatureAnalysis::Key;
 
 FeatureAnalysis::~FeatureAnalysis() {}
 

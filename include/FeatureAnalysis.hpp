@@ -18,7 +18,7 @@ struct ResultFeatureAnalysis {
 
 /// Abstract class for analyses that extract static code features. 
 /// The extraction of features from a single instruction is delegated to a feature set class.
-struct FeatureAnalysis : public llvm::AnalysisInfoMixin<FeatureAnalysis> {
+struct FeatureAnalysis  {
 
  protected:
     FeatureSet *features;
@@ -48,10 +48,6 @@ struct FeatureAnalysis : public llvm::AnalysisInfoMixin<FeatureAnalysis> {
     virtual void finalize();
 
     static bool isRequired() { return true; }
- 
-  private:
-    static llvm::AnalysisKey Key;
-    friend struct llvm::AnalysisInfoMixin<FeatureAnalysis>;   
 
 }; // end FeatureAnalysis
 

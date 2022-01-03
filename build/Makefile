@@ -224,6 +224,36 @@ intrinsics_gen/fast:
 	$(MAKE) -f CMakeFiles/intrinsics_gen.dir/build.make CMakeFiles/intrinsics_gen.dir/build
 .PHONY : intrinsics_gen/fast
 
+src/DefaultFeatureAnalysis.o: src/DefaultFeatureAnalysis.cpp.o
+
+.PHONY : src/DefaultFeatureAnalysis.o
+
+# target to build an object file
+src/DefaultFeatureAnalysis.cpp.o:
+	$(MAKE) -f CMakeFiles/feature_pass.dir/build.make CMakeFiles/feature_pass.dir/src/DefaultFeatureAnalysis.cpp.o
+	$(MAKE) -f CMakeFiles/feature_ext.dir/build.make CMakeFiles/feature_ext.dir/src/DefaultFeatureAnalysis.cpp.o
+.PHONY : src/DefaultFeatureAnalysis.cpp.o
+
+src/DefaultFeatureAnalysis.i: src/DefaultFeatureAnalysis.cpp.i
+
+.PHONY : src/DefaultFeatureAnalysis.i
+
+# target to preprocess a source file
+src/DefaultFeatureAnalysis.cpp.i:
+	$(MAKE) -f CMakeFiles/feature_pass.dir/build.make CMakeFiles/feature_pass.dir/src/DefaultFeatureAnalysis.cpp.i
+	$(MAKE) -f CMakeFiles/feature_ext.dir/build.make CMakeFiles/feature_ext.dir/src/DefaultFeatureAnalysis.cpp.i
+.PHONY : src/DefaultFeatureAnalysis.cpp.i
+
+src/DefaultFeatureAnalysis.s: src/DefaultFeatureAnalysis.cpp.s
+
+.PHONY : src/DefaultFeatureAnalysis.s
+
+# target to generate assembly for a file
+src/DefaultFeatureAnalysis.cpp.s:
+	$(MAKE) -f CMakeFiles/feature_pass.dir/build.make CMakeFiles/feature_pass.dir/src/DefaultFeatureAnalysis.cpp.s
+	$(MAKE) -f CMakeFiles/feature_ext.dir/build.make CMakeFiles/feature_ext.dir/src/DefaultFeatureAnalysis.cpp.s
+.PHONY : src/DefaultFeatureAnalysis.cpp.s
+
 src/FeatureAnalysis.o: src/FeatureAnalysis.cpp.o
 
 .PHONY : src/FeatureAnalysis.o
@@ -418,6 +448,9 @@ help:
 	@echo "... omp_gen"
 	@echo "... install/strip"
 	@echo "... intrinsics_gen"
+	@echo "... src/DefaultFeatureAnalysis.o"
+	@echo "... src/DefaultFeatureAnalysis.i"
+	@echo "... src/DefaultFeatureAnalysis.s"
 	@echo "... src/FeatureAnalysis.o"
 	@echo "... src/FeatureAnalysis.i"
 	@echo "... src/FeatureAnalysis.s"

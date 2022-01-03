@@ -2,18 +2,19 @@
 
 #include <llvm/Analysis/LoopInfo.h>
 #include <llvm/Analysis/ScalarEvolution.h>
-
 #include <llvm/IR/Module.h>
 #include <llvm/Pass.h>
 #include <llvm/Passes/PassBuilder.h>
 #include <llvm/Passes/PassPlugin.h>
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
+#include <llvm/Transforms/Utils/LoopSimplify.h>
 using namespace llvm;
 
 #include "Kofler13Analysis.hpp"
 #include "FeaturePrinter.hpp"
 #include "FeatureNormalization.hpp"
 using namespace celerity;
+
 
 llvm::AnalysisKey Kofler13Analysis::Key;
 
@@ -25,9 +26,10 @@ llvm::AnalysisKey Kofler13Analysis::Key;
 ///  - support up to 3 nested level
 void Kofler13Analysis::extract(llvm::Function &fun, llvm::FunctionAnalysisManager &fam) {
     std::cerr << "extract on function " << fun.getName().str() << "\n";
-    LoopInfo &LI = fam.getResult<LoopAnalysis>(fun);
-    ScalarEvolution &SCEV = fam.getResult<ScalarEvolutionAnalysis>(fun);
-
+    //fam.getResult<LoopSimplifyPass>(fun);    
+    LoopInfo &LI = fam.getResult<LoopAnalysis>(fun);    
+    ScalarEvolution &SE = fam.getResult<ScalarEvolutionAnalysis>(fun);
+    
     // skip the function if is only a declaration    
     if (fun.isDeclaration()) return;
 
@@ -36,60 +38,46 @@ void Kofler13Analysis::extract(llvm::Function &fun, llvm::FunctionAnalysisManage
     for(const BasicBlock &bb : fun.getBasicBlockList()){
         multiplier[&bb] = 1.0f;
     }	
-
+    
     cerr << "loops:\n";
     int count = 0;
-    for(const Loop *loop : LI) {        
-        cerr << " * " << count
-             << "\n  - name:" << loop->getName().str()
-             << "\n  - depth:" << loop->getLoopDepth()
-             << "\n  - canonical:" << loop->isCanonical(SCEV)
-             << "\n";
-        count++;
+    for(Loop *loop : LI.getLoopsInPreorder()) {             
+        outs() << " * " << (count+1)
+            //<< "\n  -        id:" << loop->
+            << " - depth:" << loop->getLoopDepth()
+            << " - canonical:" << loop->isCanonical(SE)
+            //<< " - indvar " << loop->getCanonicalInductionVariable()->getName()
+            << "\n";       
+        count++;        
     }
+
+    
 
     // 2. for each BB in a loop, we multiply that "loop multiplier" times 100
     const int default_loop_contribution = 100;
-    for(const Loop *loop1 : LI) {
-        cerr << "loop 1 " << loop1->getName().str() <<  "\n";
+    for(const Loop *loop : LI.getLoopsInPreorder()) {
         // calculate the contributoin for the loop
-        int contrib1 = loopContribution(*loop1, SCEV);
+        int contrib = loopContribution(*loop, SE);        
         // apply to each basic block in the loop
-        for(BasicBlock *bb : loop1->getBlocks()){ // TODO: shold we only count the body?
-            multiplier[bb] *= contrib1;
+        for(BasicBlock *bb : loop->getBlocks()){ // TODO: shold we only count the body?
+            multiplier[bb] *= contrib;
         }
+        /*
         //iterate on sub-loop (2)       
         for (const Loop *loop2 : loop1->getLoopsInPreorder()) {
-            cerr << "loop 2 " << loop2->getName().str() <<  "\n";        
-            int contrib2 = loopContribution(*loop2, SCEV);        
+            outs() << "loop 2 " << loop2->getName().str() <<  "\n";        
+            int contrib2 = loopContribution(*loop2, SE);        
             for(BasicBlock *bb : loop2->getBlocks()){
                 multiplier[bb] *= contrib2;
             }        
         }
-    /*
-        for (const Loop *loop2 : loopnest) {
-            cerr << "    subloop " << loop2->getName().str() << " tripCount: " << SCEV.getSmallConstantTripCount(loop) << "\n";
-            unsigned tripCount = SCEV.getSmallConstantTripCount(loop);
-            for(const BasicBlock *bb : loop2->getBlocks()) {
-                int contribution;
-		if (tripCount > 1 && bb == loop2->getExitingBlock()) {
-		    contribution = tripCount;
-		} else if (tripCount > 1) {
-		    contribution = tripCount - 1;
-		} else {
-		    contribution = default_loop_contribution;
-		}
-                multiplier[bb] = multiplier[bb] * contribution;
-                // cerr << "        BB " << bb->getName().str() << " contribution " << contribution << " total " << multiplier[bb] << "\n";
-            }
-        }
-    */
-    }
+        */
+    } // for
 
     /// 3. evaluation
     for (llvm::BasicBlock &bb : fun) {
         int mult = multiplier[&bb];
-        /// cerr << "BB mult: " << mult << endl;
+        outs() << "BB mult: " << mult << "\n";
         for(Instruction &i : bb){
             features->eval(i, mult);
         }

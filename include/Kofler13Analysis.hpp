@@ -14,7 +14,7 @@ namespace celerity {
 /// An LLVM analysis pass to extract features using [Kofler et al., 13] loop heuristics.
 /// The heuristic gives more important (x100) to the features inside a loop.
 /// It requires the loop analysis pass ("loops") to be executed before of that pass.
-struct Kofler13Analysis : public FeatureAnalysis {
+struct Kofler13Analysis : public FeatureAnalysis, llvm::AnalysisInfoMixin<Kofler13Analysis> {
  private:
    const int default_loop_contribution = 100;
 
@@ -30,7 +30,8 @@ struct Kofler13Analysis : public FeatureAnalysis {
     // calculate del loop contribution of a given loop (assume non nesting, which is calculated later)
     int loopContribution(const llvm::Loop &loop, ScalarEvolution &SE);
 
-    static llvm::AnalysisKey Key;
+  friend struct llvm::AnalysisInfoMixin<Kofler13Analysis>;   
+  static llvm::AnalysisKey Key;
 };
 
 } // end namespace celerity

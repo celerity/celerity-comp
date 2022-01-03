@@ -9,11 +9,10 @@ using namespace llvm;
 
 namespace celerity {
 
-
 /// An LLVM analysisfunction pass that extract static code features. 
 /// The extraction of features from a single instruction is delegated to a feature set class.
 /// In this basic implementation, BB's instruction contributions are summed up.
-struct DefaultFeatureAnalysis : public FeatureAnalysis {
+struct DefaultFeatureAnalysis : public FeatureAnalysis, llvm::AnalysisInfoMixin<DefaultFeatureAnalysis> {
     
  public:
     DefaultFeatureAnalysis(string feature_set = "fan19") { 
@@ -22,6 +21,9 @@ struct DefaultFeatureAnalysis : public FeatureAnalysis {
     }
     virtual ~DefaultFeatureAnalysis(){}
 
-}; // end FeatureAnalysis
+  friend struct llvm::AnalysisInfoMixin<DefaultFeatureAnalysis>;   
+  static llvm::AnalysisKey Key;
+
+}; // end DefaultFeatureAnalysis
 
 } // end namespace celerity
