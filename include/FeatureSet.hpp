@@ -14,12 +14,12 @@ namespace celerity {
 // Supported feature sets
 enum FeatureSetOptions { fan19, grewe13, full };
 
-/// A set of feature, including both raw values and normalized ones. 
+/// A set of features, including both raw values and normalized ones. 
 /// Abstract class, with different subslasses
 class FeatureSet {
 public:
-    llvm::StringMap<unsigned> raw;
-    llvm::StringMap<float> feat;
+    llvm::StringMap<unsigned> raw; // features as counters, before normalization
+    llvm::StringMap<float> feat;   // features after normalization, they should not necessarily be the same features as the raw
     int instruction_num;
     int instruction_tot_contrib;
     string name;
@@ -27,73 +27,32 @@ public:
 public:
     FeatureSet() : name("default"){}
     FeatureSet(string feature_set_name) : name(feature_set_name){}
-    virtual ~FeatureSet();
+    virtual ~FeatureSet(){}
 
     llvm::StringMap<unsigned> getFeatureCounts(){ return raw; }
     llvm::StringMap<float> getFeatureValues(){ return feat; }
+    string getName(){ return name; }
 
-    string getName(){
-        return name;
+    /// set all features to zero
+    virtual void reset(){
+        for(StringRef rkey : raw.keys())
+            raw[rkey] = 0;
+        for(StringRef fkey : feat.keys())
+            feat[fkey] = 0;
+        instruction_num = 0;
+        instruction_tot_contrib = 0;
     }
 
-    void add(const string &feature_name, int contribution = 1){
+    virtual void add(const string &feature_name, int contribution = 1){
         int old = raw[feature_name];
         raw[feature_name] = old + contribution;
         instruction_num += 1;
         instruction_tot_contrib += contribution;
     }
 
-    void eval(llvm::Instruction &inst, int contribution = 1) {
-        add(eval_instruction(inst), contribution);
-    }
-
-/// NOTE previous version of thi code handles the call invocation case, 
-// where a function calls nother one.
- // we shoudl handel this in the upper layer -> pass
-
-    /*void add(llvm::Function* func, const string &feature_name, int contribution = 1){
-        int old = raw[func][feature_name];
-        raw[func][feature_name] = old + contribution;
-        instructionNum[func] += 1;
-        instructionTotContrib[func] += contribution;
-    }	
-    
-    void eval(llvm::Instruction &inst, int contribution = 1) {
-        llvm::Function *func = inst.getFunction();
-        // test if we need to do init
-        if (instructionNum.find(func) == instructionNum.end()) {
-            raw[func]  = unordered_map<string,int>();
-            feat[func] = unordered_map<string,float>();
-            instructionNum[func] = 0;
-            instructionTotContrib[func] = 0;
-        }
-        // handling function calls
-        if (llvm::CallInst *call = llvm::dyn_cast<llvm::CallInst>(&inst)) {
-	    if (func != call->getCalledFunction() && call->getCalledFunction()) {
-	        // ensure this is not a recursion, which is not supported
-		int currInstNum = instructionNum[func];
-                unordered_map<string, int> fraw = raw[call->getCalledFunction()];
-	        for (const auto& kv : fraw) {
-	            add(func, kv.first, kv.second);
-	        }
-		instructionNum[func] = currInstNum + instructionNum[call->getCalledFunction()];
-	    }
-        } else {
-            add(func, eval_instruction(inst), contribution);
-        }
-    }
-    */
-
-    string get_type_prefix(const llvm::Instruction &inst);
-    
-    void print(llvm::raw_ostream &out_stream);    
-    
-    void normalize();
-
-protected:
-    /// Abstract method that evaluates an llvm instruction in terms of feature representation. 
-    virtual string eval_instruction(const llvm::Instruction &inst, int contribution = 1) = 0;
-    
+    virtual void eval(llvm::Instruction &inst, int contribution = 1) = 0;
+    virtual void normalize();
+    virtual void print(llvm::raw_ostream &out_stream);     
 };
 
 
@@ -101,39 +60,33 @@ protected:
 class Fan19FeatureSet : public FeatureSet {
  public:
     Fan19FeatureSet() : FeatureSet("fan19"){}
-    virtual ~Fan19FeatureSet();
-    virtual string eval_instruction(const llvm::Instruction &inst, int contribution = 1);    
+    virtual ~Fan19FeatureSet(){}
+    virtual void reset();
+    virtual void eval(llvm::Instruction &inst, int contribution = 1);    
 };
 
-/* Feature set used by Grewe & O'Boyle. It is very generic and mainly designed to catch mem. vs comp. */
+/// Feature set used by Grewe & O'Boyle. It is very generic and mainly designed to catch mem. vs comp. 
 class Grewe11FeatureSet : public FeatureSet {
  public:
     Grewe11FeatureSet() : FeatureSet("grewe13"){}
-    virtual ~Grewe11FeatureSet();
-    virtual string eval_instruction(const llvm::Instruction &inst, int contribution = 1);
+    virtual ~Grewe11FeatureSet(){}
+    virtual void reset();
+    virtual void eval(llvm::Instruction &inst, int contribution = 1);
 }; 
 
-/* Feature set used by Fan, designed for GPU architecture. */
+/// Feature set used by Fan, designed for GPU architecture. 
 class FullFeatureSet : public FeatureSet {
  public:
     FullFeatureSet() : FeatureSet("full"){}
-    virtual ~FullFeatureSet();
-    virtual string eval_instruction(const llvm::Instruction &inst, int contribution = 1);    
+    virtual ~FullFeatureSet(){}
+    //virtual void reset(); we are fine the the super class reset()
+    virtual void eval(llvm::Instruction &inst, int contribution = 1);
 };
 
-
-/* Memory address space identifiers, used for feature recognition. */
-const unsigned privateAddressSpace = 0;
-const unsigned localAddressSpace   = 1;
-const unsigned globalAddressSpace  = 2;
-enum class AddressSpaceType { Private, Local, Global, Unknown };
-AddressSpaceType checkAddrSpace(const unsigned addrSpaceId);
-
+/// Registry of feature sets
 using FSRegistry = Registry<celerity::FeatureSet*>;
 
-
 /// Printing functions
-
 /// Print all features in a nicely formatted table
 template <typename T>
 void print_features(llvm::StringMap<T> &feature_map, llvm::raw_ostream &out_stream){
@@ -144,7 +97,6 @@ void print_features(llvm::StringMap<T> &feature_map, llvm::raw_ostream &out_stre
     }
     out_stream << ss.str();
 }
-
 
 /// Print all feature names in one line
 template <typename T>
@@ -158,7 +110,6 @@ void print_feature_names(llvm::StringMap<T> &feature_map, llvm::raw_ostream &out
     out_stream << ss.str();
 }
 
-
 /// Print all feature values in one line
 template <typename T>
 void print_feature_values(llvm::StringMap<T> &feature_map, llvm::raw_ostream &out_stream){
@@ -170,6 +121,5 @@ void print_feature_values(llvm::StringMap<T> &feature_map, llvm::raw_ostream &ou
     ss << "\n";
     out_stream << ss.str();
 }
-
 
 } // end namespace celerity

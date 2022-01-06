@@ -21,10 +21,22 @@ using namespace std;
 using namespace llvm;
 
 #include "FeatureSet.hpp"
-#include "FeatureAnalysis.hpp"
+#include "DefaultFeatureAnalysis.hpp"
 #include "Kofler13Analysis.hpp"
 #include "FeaturePrinter.hpp"
 using namespace celerity;
+
+//-----------------------------------------------------------------------------
+// Register the analysis in a FeatureAnalysis registry
+//-----------------------------------------------------------------------------
+static celerity::FeatureAnalysis* _static_dfa_ptr_ = new celerity::DefaultFeatureAnalysis; // dynamic_cast<celerity::FeatureAnalysis*>(&_static_fa_);
+static bool _registered_feature_analysis_ = FARegistry::registerByKey("default", _static_dfa_ptr_ ); 
+//-----------------------------------------------------------------------------
+// Register the Kofler13 analysis in the FeatureAnalysis registry
+//-----------------------------------------------------------------------------
+static celerity::FeatureAnalysis* _static_kfa_ptr_ = new celerity::Kofler13Analysis; // dynamic_cast<celerity::FeatureAnalysis*>(&_static_fa_);
+static bool _registered_kofler13_analysis_ = FARegistry::registerByKey("kofler13", _static_kfa_ptr_ ); 
+
 
 
 //-----------------------------------------------------------------------------

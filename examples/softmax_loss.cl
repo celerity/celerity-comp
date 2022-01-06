@@ -1,4 +1,4 @@
-// advanced example taken from OpenCL (Open Source Computer Vision Library)
+// advanced example taken from OpenCV (Open Source Computer Vision Library)
 // https://github.com/priyankush-siloria/opencv/blob/dc04c33665579ad1bff62a6deafe742da658eff2/modules/dnn/src/opencl/softmax_loss.cl
 
 // addition for macro

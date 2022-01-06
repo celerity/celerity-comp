@@ -3,6 +3,7 @@
 #include <llvm/Analysis/LoopInfo.h>
 #include <llvm/Analysis/ScalarEvolution.h>
 #include <llvm/IR/Module.h>
+#include <llvm/IR/Dominators.h>
 #include <llvm/Pass.h>
 #include <llvm/Passes/PassBuilder.h>
 #include <llvm/Passes/PassPlugin.h>
@@ -15,105 +16,93 @@ using namespace llvm;
 #include "FeatureNormalization.hpp"
 using namespace celerity;
 
-
 llvm::AnalysisKey Kofler13Analysis::Key;
 
 /// Feature extraction based on Kofler et al. 13 loop heuristics
-/// Requires LoopAnalysis and ScalarEvolutionAnalysis.
-/// Current limitations:
-///  - it only works on natual loops (in some case nested loops may be missing)
-///  - analysis is more accurate on canonical loops
-///  - support up to 3 nested level
-void Kofler13Analysis::extract(llvm::Function &fun, llvm::FunctionAnalysisManager &fam) {
-    std::cerr << "extract on function " << fun.getName().str() << "\n";
-    //fam.getResult<LoopSimplifyPass>(fun);    
-    LoopInfo &LI = fam.getResult<LoopAnalysis>(fun);    
-    ScalarEvolution &SE = fam.getResult<ScalarEvolutionAnalysis>(fun);
-    
-    // skip the function if is only a declaration    
+void Kofler13Analysis::extract(llvm::Function &fun, llvm::FunctionAnalysisManager &FAM)
+{
+    std::cout << "extract on function " << fun.getName().str() << "\n";
+    // skip the function if is only a declaration
     if (fun.isDeclaration()) return;
+    ScalarEvolution       &SE = FAM.getResult<ScalarEvolutionAnalysis>(fun);
+    LoopInfo              &LI = FAM.getResult<LoopAnalysis>(fun);
+    DominatorTree         &DT = FAM.getResult<DominatorTreeAnalysis>(fun);
+    AssumptionCache       &AC = FAM.getResult<AssumptionAnalysis>(fun);
+   
+    LoopAnalysisManager *LAM = nullptr;
+    if (auto *LAMProxy = FAM.getCachedResult<LoopAnalysisManagerFunctionProxy>(fun))
+        LAM = &LAMProxy->getManager();  
+    auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(fun);
+    bool changed = false;
+    for (auto &loop : LI) {
+        changed |= simplifyLoop(loop, &DT, &LI, &SE, &AC, nullptr, false);
+        changed |= formLCSSARecursively(*loop, DT, &LI, &SE);
+    }
+   outs() << " loop in LCSSA form (loop has changed:" << changed << ")\n";
+
+    // loop checks
+    for (Loop *loop : LI.getLoopsInPreorder()) {
+        if (!loop->isLoopSimplifyForm()) errs() << " WARNING Loop is not in normal form\n";
+        //if (!loop->isCanonical(SE)) errs() << " WARNING Loop is not canonical\n";
+        if (!loop->isLCSSAForm(DT)) errs() << " WARNING Loop is not in LCSSA form\n";
+        //else                        errs() << " Loop is in LCSSA form\n";
+        BasicBlock *Latch = loop->getLoopLatch();
+        if (loop->getExitingBlock() != Latch)  errs() << " WARNING Loop: Exiting and latch block are different\n";
+    }
 
     // 1. for each BB, we initialize it's "loop multiplier" to 1
     std::unordered_map<const llvm::BasicBlock *, unsigned> multiplier;
-    for(const BasicBlock &bb : fun.getBasicBlockList()){
+    for (const BasicBlock &bb : fun.getBasicBlockList()) {
         multiplier[&bb] = 1.0f;
-    }	
-    
-    cerr << "loops:\n";
-    int count = 0;
-    for(Loop *loop : LI.getLoopsInPreorder()) {             
-        outs() << " * " << (count+1)
-            //<< "\n  -        id:" << loop->
-            << " - depth:" << loop->getLoopDepth()
-            << " - canonical:" << loop->isCanonical(SE)
-            //<< " - indvar " << loop->getCanonicalInductionVariable()->getName()
-            << "\n";       
-        count++;        
     }
 
-    
+    std::map<Loop*, int> loop_cost;
+    for (Loop *loop : LI.getLoopsInPreorder()) {
+        loop_cost[loop] = loopContribution(*loop, LI, SE);
+    }
 
     // 2. for each BB in a loop, we multiply that "loop multiplier" times 100
-    const int default_loop_contribution = 100;
-    for(const Loop *loop : LI.getLoopsInPreorder()) {
-        // calculate the contributoin for the loop
-        int contrib = loopContribution(*loop, SE);        
-        // apply to each basic block in the loop
-        for(BasicBlock *bb : loop->getBlocks()){ // TODO: shold we only count the body?
-            multiplier[bb] *= contrib;
+    for (Loop *loop : LI.getLoopsInPreorder()) {
+        for (BasicBlock *bb : loop->getBlocks()) { // TODO: shold we only count the body?
+            multiplier[bb] *= loop_cost[loop];
         }
-        /*
-        //iterate on sub-loop (2)       
-        for (const Loop *loop2 : loop1->getLoopsInPreorder()) {
-            outs() << "loop 2 " << loop2->getName().str() <<  "\n";        
-            int contrib2 = loopContribution(*loop2, SE);        
-            for(BasicBlock *bb : loop2->getBlocks()){
-                multiplier[bb] *= contrib2;
-            }        
-        }
-        */
     } // for
 
     /// 3. evaluation
     for (llvm::BasicBlock &bb : fun) {
         int mult = multiplier[&bb];
-        outs() << "BB mult: " << mult << "\n";
-        for(Instruction &i : bb){
+        //outs() << "BB mult: " << mult << "\n";
+        for (Instruction &i : bb) {
             features->eval(i, mult);
         }
     }
-
 }
 
-int Kofler13Analysis::loopContribution(const llvm::Loop &loop, ScalarEvolution &SCEV){
-    // if canonical, we can try a more accurate guess
-    if(loop.isCanonical(SCEV)){ 
-        auto iv =loop.getInductionVariable(SCEV);
-        Optional<Loop::LoopBounds> opt_bounds = Loop::LoopBounds::getBounds(loop, *iv, SCEV);
-        if(opt_bounds){
-            Loop::LoopBounds &bounds = opt_bounds.getValue();
-            // if canonical, we assume the loop starts at 0 and ends at _ub_
-            llvm::Value &uv = bounds.getFinalIVValue() ;
-            // case 1: uv is an integer and constant
-            cerr << "checking uv for " << uv.getName().str() << "\n";            
-            // int
-            if (ConstantInt* ci = dyn_cast<ConstantInt>(&uv)) {
-                if (ci->getBitWidth() <= 32) {
-                    int int_val = ci->getSExtValue();
-                    cerr << "loop size is " << int_val << "\n";
-                    return int_val;
-                }
-            }
-            // case 2: uv is not a constant, then we use the default_loop_contribution         
-        } else  
-            cerr << "LoopBounds opt. not found\n";
+int Kofler13Analysis::loopContribution(const Loop &loop, LoopInfo &LI, ScalarEvolution &SE) {
+    // print loop info
+    PHINode *ind_var = loop.getInductionVariable(SE);
+    if(ind_var == nullptr){
+        outs() << "  WARNING: induction variable not found, counting default loop contribution\n";
+        return default_loop_contribution;
     }
+
+    Optional<Loop::LoopBounds> bounds = Loop::LoopBounds::getBounds(loop, *ind_var, SE);
+    if (!bounds) {
+        outs() << "  WARNING: loop bound not found, counting default loop contribution\n";
+        return default_loop_contribution;
+    }
+
+    // calculate loop cost
+    // case 1: uv is an integer and constant
+    Value &final = bounds->getFinalIVValue();
+    if (ConstantInt *ci = dyn_cast<ConstantInt>(&final)) {
+        if (ci->getBitWidth() <= 32) {
+            int int_val = ci->getSExtValue();
+            outs() << "  CONST loop size is " << int_val << "\n";
+            return int_val;
+        }
+    }
+    // case 2: uv is not a constant, then we use the default loop contribution
+    outs() << "  Not finding a constant int for finalIVValue, counting default loop contribution\n";
     return default_loop_contribution;
 }
-            
-
-//-----------------------------------------------------------------------------
-// Register the Kofler13 analysis in the FeatureAnalysis registry
-//-----------------------------------------------------------------------------
-static celerity::FeatureAnalysis* _static_kfa_ptr_ = new celerity::Kofler13Analysis; // dynamic_cast<celerity::FeatureAnalysis*>(&_static_fa_);
-static bool _registered_feature_analysis_ = FARegistry::registerByKey("kofler13", _static_kfa_ptr_ ); 

@@ -42,6 +42,10 @@ struct FeaturePrinterPass : public llvm::PassInfoMixin<celerity::FeaturePrinterP
       print_feature_names(feature_set.feat, out_stream);
       out_stream.changeColor(llvm::raw_null_ostream::Colors::WHITE, false);
       print_feature_values(feature_set.raw, out_stream);
+
+      out_stream.changeColor(llvm::raw_null_ostream::Colors::WHITE, true);
+      print_feature_names(feature_set.feat, out_stream);
+      out_stream.changeColor(llvm::raw_null_ostream::Colors::WHITE, false);
       print_feature_values(feature_set.feat, out_stream);
       return PreservedAnalyses::all();
    }

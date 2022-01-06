@@ -9,7 +9,7 @@
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Instructions.h>
 //#include <llvm/IR/Value.h>
-#include "llvm/IR/Mangler.h"
+//#include "llvm/IR/Mangler.h"
 using namespace llvm;
 
 namespace celerity {

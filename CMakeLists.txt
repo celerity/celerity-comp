@@ -25,22 +25,23 @@ option(SAMPLE_SCRIPTS "Install sample scripts for C functions, OpenCL and SYCL" 
 option(CELERITY_RUNTIME "Install the integration layer for Celerity (requires existing Celerity Runtime installation)" OFF)
 # TODO: 3opts: only LLVM passes, only external tool, both
 
-# sources
+# include & sources
 set(FEATURE_INCLUDE 
   include/FeaturePrinter.hpp   include/FeatureSet.hpp       include/KernelInvariant.hpp  
   include/FeatureAnalysis.hpp  include/Kofler13Analysis.hpp include/DefaultFeatureAnalysis.hpp
   include/FeatureNormalization.hpp )
-
 set(FEATURE_SRC 
   src/FeatureSet.cpp           src/FeaturePrinter.cpp        
-  src/FeatureAnalysis.cpp      src/Kofler13Analysis.cpp     src/DefaultFeatureAnalysis.cpp )
+  src/FeatureAnalysis.cpp      src/Kofler13Analysis.cpp     src/DefaultFeatureAnalysis.cpp 
+  src/FeatureAnalysisPlugin.cpp )
 
+# Support for polynomial features 
 if(POLFEAT)
   set(FEATURE_INCLUDE ${FEATURE_INCLUDE}  include/PolFeatAnalysis.hpp)
   set(FEATURE_SRC     ${FEATURE_SRC}      src/PolFeatAnalysis.cpp)
 endif(POLFEAT)
 
-# build the feature extraction tool 
+# Build the feature extraction tool 
 if(EXTRACTOR_TOOL)
   add_executable(feature_ext ${FEATURE_SRC} src/feature_tool.cpp)
   llvm_map_components_to_libnames(llvm_libs support passes core irreader analysis)
@@ -49,13 +50,8 @@ if(EXTRACTOR_TOOL)
   #target_compile_options(feature_ext PRIVATE -Wl,-znodelete)
 endif(EXTRACTOR_TOOL)
 
-
 # Build the LLVM pass to be used with the optimizer
-#add_library(feature_eval MODULE ${FEATURE_SRC} src/feature_eval.cpp)
-#add_library(feature_pass MODULE ${FEATURE_SRC} src/feature_pass.cpp)
-#add_llvm_loadable_module(FeatureEvaluationPass feature_eval.cpp)
 add_library(feature_pass MODULE ${FEATURE_SRC})
-
 
 # Build the integration layer to be used with the Celerity runtime
 if(CELERITY_RUNTIME)
@@ -80,6 +76,9 @@ if(SAMPLE_SCRIPTS)
   install(FILES "examples/vecadd.cl"                     DESTINATION "${CMAKE_BINARY_DIR}/samples" )
   install(FILES "examples/2mm.cl"                        DESTINATION "${CMAKE_BINARY_DIR}/samples" )
   install(FILES "examples/3mm.cl"                        DESTINATION "${CMAKE_BINARY_DIR}/samples" )
-  install(FILES "examples/softmax_loss.cl"                        DESTINATION "${CMAKE_BINARY_DIR}/samples" )
+  install(FILES "examples/kmeans.cl"                     DESTINATION "${CMAKE_BINARY_DIR}/samples" )
+  install(FILES "examples/softmax_loss.cl"               DESTINATION "${CMAKE_BINARY_DIR}/samples" )
+  install(FILES "examples/coalesced.cl"                  DESTINATION "${CMAKE_BINARY_DIR}/samples" )
+  install(FILES "examples/parboil.cl"                    DESTINATION "${CMAKE_BINARY_DIR}/samples" )
   install(FILES "examples/simple_loop.c"                 DESTINATION "${CMAKE_BINARY_DIR}/samples" )
 endif(SAMPLE_SCRIPTS)

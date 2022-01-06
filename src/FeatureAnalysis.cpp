@@ -17,7 +17,7 @@ using namespace llvm;
 #include "KernelInvariant.hpp"
 using namespace celerity;
 
-//llvm::AnalysisKey FeatureAnalysis::Key;
+
 
 FeatureAnalysis::~FeatureAnalysis() {}
 
@@ -45,47 +45,9 @@ void FeatureAnalysis::finalize()
 
 ResultFeatureAnalysis FeatureAnalysis::run(llvm::Function &fun, llvm::FunctionAnalysisManager &fam)
 {
-  outs() << "analysis for function: " << fun.getName().str() 
-    << " feature-set: " << features->getName()
-    << " analysis-name: " << getName() << "\n";
+  outs() << "function: " << fun.getName().str() << " feature-set: " << features->getName() << " analysis-name: " << getName() << "\n";
+  features->reset();
   extract(fun, fam);
   finalize();
   return ResultFeatureAnalysis { features->getFeatureCounts(), features->getFeatureValues() };
 }
-
-
-/*
-bool FeaturePass::runOnModule(Module& m) {
-    CallGraph &CG = getAnalysis<CallGraphWrapperPass>().getCallGraph();
-
-    // Walk the callgraph in bottom-up SCC order.
-    scc_iterator<CallGraph*> CGI = scc_begin(&CG);
-
-    CallGraphSCC CurSCC(CG, &CGI);
-    while (!CGI.isAtEnd()) {
-        // Copy the current SCC and increment past it so that the pass can hack
-        // on the SCC if it wants to without invalidating our iterator.
-        const std::vector<CallGraphNode *> &NodeVec = *CGI;
-        CurSCC.initialize(NodeVec);
-        runOnSCC(CurSCC);
-        ++CGI;
-    }
-
-    return false;
-}
-
-bool FeaturePass::runOnSCC(CallGraphSCC &SCC) {
-    for (auto &cgnode : SCC) {
-        Function *func = cgnode->getFunction();
-        if (func) {
-            //cout << "eval function: " << (func->hasName() ? func->getName().str() : "anonymous") << "\n";
-            eval_function(*func);
-          finalize();
-            //features->print();
-        }
-    }
-    return false;
-}
-*/
-
-

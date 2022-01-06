@@ -3,15 +3,52 @@
 #include <set>
 using namespace std;
 
-#include <llvm/Support/MemoryBuffer.h>
+#include <llvm/IR/Instruction.h>
+
 using namespace llvm;
 
 #include "FeatureSet.hpp"
 #include "FeatureNormalization.hpp"
+#include "MemAccessFeature.hpp"
 using namespace celerity;
 
 
-FeatureSet::~FeatureSet(){}
+const set<string> INT_ADDSUB   = {"add", "sub"};
+const set<string> INT_MUL      = {"mul"};
+const set<string> INT_DIV      = {"udiv","sdiv","sdivrem"};
+//const set<string> INT_REM    = {"urem","srem"}; // remainder of a division
+const set<string> FLOAT_ADDSUB = {"fadd", "fsub"};
+const set<string> FLOAT_MUL    = {"fmul"};
+const set<string> FLOAT_DIV    = {"fdiv"};
+//const set<string> FLOAT_REM  = {"frem"};
+//const set<string> CALL         = {"call"}; 
+const set<string> FNAME_SPECIAL= {"sqrt", "exp", "log", "abs", "fabs", "max", "pow","floor"};
+const set<string> IGNORE_FNAME = {"get_global_id", "get_local_id", "get_num_groups", "get_group_id", "get_max_sub_group_size", "max", "pow"};
+const set<string> BITWISE      = {"shl","lshr", "ashr", "and", "or", "xor"};
+//const set<string> VECTOR     = {"extractelement","insertelement", "shufflevector"};
+//const set<string> AGGREGATE  = {"extractvalue","insertvalue"};
+const set<string> INTRINSIC    = {"llvm.fmuladd",  "llvm.canonicalize", "llvm.smul.fix.sat", "‘llvm.umul.fix", "llvm.smul.fix",
+                                  "llvm.sqrt", "llvm.powi", "llvm.sin", "llvm.cos", "llvm.pow", "llvm.exp", "llvm.exp2",
+                                  "llvm.log", "llvm.log10", "llvm.log2", "llvm.fma", "llvm.fabs","llvm.minnum", "llvm.maxnum",
+                                  "llvm.minimum", "llvm.maximum", "llvm.copysign", "llvm.floor", "llvm.ceil", "llvm.trunc",
+                                  "llvm.rint", "llvm.nearbyint", "llvm.round", "llvm.lround", "llvm.llround", "llvm.lrint","llvm.llrint"};
+const set<string> BARRIER      = {"barrier","sub_group_reduce_add"};
+const set<string> CONTROL_FLOW = {"phi","br","brcond","brindirect","brjt"}; 
+const set<string> CAST         = {"uitofp","fptosi","sitofp"}; 
+const set<string> IGNORE       = {"getelementptr", "alloca", "sext","icmp","zext","trunc","ret"};
+
+static inline bool instr_check(const string &instr_name, const set<string> &instr_set){
+    return instr_set.find(instr_name) != instr_set.end();
+}
+
+static inline bool instr_start_with(const string &instr_name, const set<string> &instr_set){
+    for(const string &s : instr_set){
+        if (s.rfind(instr_name, 0) == 0)  
+            return true;
+    }
+    return false;
+}
+
 
 void FeatureSet::print(llvm::raw_ostream &out_stream){
     out_stream << "raw values\n";
@@ -24,146 +61,153 @@ void FeatureSet::normalize(){
 	celerity::normalize(*this);
 }
 
-string FeatureSet::get_type_prefix(const llvm::Instruction &inst) {
-    Type *t = inst.getType();
-    if (t->isHalfTy()) {
-        return "f16.";
-    } else if (t->isFloatTy()) {
-        return "f32.";
-    } else if (t->isDoubleTy()) {
-        return "f64.";
-    } 
-    //else if (t->isIntegerTy()) {
-    //    return "i" + to_string(t->getIntegerBitWidth()) + ".";
-    //}
-    return "";
+
+void Fan19FeatureSet::reset(){
+    raw["int_add"] = 0;
+    raw["int_mul"] = 0;
+    raw["int_div"] = 0;
+    raw["int_bw"] = 0;
+    raw["float_add"] = 0;
+    raw["float_mul"] = 0;
+    raw["float_div"] = 0;
+    raw["sf"] = 0;
+    raw["mem_global"] = 0;
+    raw["mem_local"] = 0;
 }
 
-
-Fan19FeatureSet::~Fan19FeatureSet(){}
-
-// List of LLVM instructions mapped into a specific feature
-const set<string> BIN_OPS = {"add","fadd", "sub", "fsub", "mul", "fmul", "udiv", "sdiv", "fdiv", "urem", "srem", "frem"};//rem- remainder of a division by...
-const set<string> INT_ADDSUB = {"add", "sub"};
-const set<string> INT_MUL = {"mul"};
-const set<string> INT_DIV = {"udiv","sdiv"};
-const set<string> INT_REM = {"urem","srem"}; // remainder of a division
-const set<string> FLOAT_ADDSUB = {"fadd", "fsub"};
-const set<string> FLOAT_MUL = {"fmul"};
-const set<string> FLOAT_DIV = {"fdiv"};
-const set<string> FLOAT_REM = {"frem"};
-const set<string> SPECIAL = {"call"};
-const set<string> BITWISE = {"shl","lshr", "ashr", "and", "or", "xor"};
-const set<string> VECTOR = {"extractelement","insertelement", "shufflevector"};
-const set<string> AGGREGATE = {"extractvalue","insertvalue"};
-
-static inline bool instr_check(const set<string> &instr_set, const string &instr_name){
-    return instr_set.find(instr_name) != instr_set.end();
-}
-
-string Fan19FeatureSet::eval_instruction(const llvm::Instruction &inst, int contribution){
+void Fan19FeatureSet::eval(llvm::Instruction &inst, int contribution){
     string i_name = inst.getOpcodeName();
-    if(instr_check(BIN_OPS,i_name)) {        
-        if(instr_check(INT_ADDSUB, i_name)){
-            return "int_addsub";
+    if(instr_check(i_name, INT_ADDSUB)){    add("int_add", contribution);   return; }
+    if(instr_check(i_name, INT_MUL)){       add("int_mul", contribution);   return; }
+    if(instr_check(i_name, INT_DIV)){       add("int_div", contribution);   return; }
+    if(instr_check(i_name, BITWISE)){       add("int_bw", contribution);    return; }
+    if(instr_check(i_name, FLOAT_ADDSUB)){  add("float_add", contribution); return; }
+    if(instr_check(i_name, FLOAT_MUL)){     add("float_mul", contribution); return; }
+    if(instr_check(i_name, FLOAT_DIV)){     add("float_div", contribution); return; }
+    // special functions
+    if (const CallInst *ci = dyn_cast<CallInst>(&inst)){
+        Function *func = ci->getCalledFunction();
+        // check intrinsic
+        if (ci->getIntrinsicID() != Intrinsic::not_intrinsic) {
+            string intrinsic_name = Intrinsic::getName(ci->getIntrinsicID()).str();
+            if(instr_check(intrinsic_name, INTRINSIC)){     
+                add("sf", contribution); 
+                return; 
+            }
+            errs() << "WARNING: fan19: intrinsic " << intrinsic_name << " not recognized\n";
         }
-        else if(instr_check(INT_MUL, i_name)){        
-            return "int_mul";
-        }
-        else if(instr_check(INT_DIV, i_name)){        
-            return "int_div";
-        }
-        else if(instr_check(INT_REM, i_name)){        
-            return "int_rem";
-        }
-        else if(instr_check(FLOAT_ADDSUB, i_name)){        
-            return get_type_prefix(inst) + "addsub";
-        }
-        else if(instr_check(FLOAT_MUL, i_name)){        
-            return get_type_prefix(inst) + "mul";
-        }
-        else if(instr_check(FLOAT_DIV, i_name)){        
-            return get_type_prefix(inst) + "div";
-        }
-        else if(instr_check(FLOAT_REM, i_name)){        
-            return get_type_prefix(inst) + "rem";
-        }
-        else if(instr_check(SPECIAL, i_name)){        
-            return get_type_prefix(inst) + "call";
-        }
+        // handling function calls
+        string fun_name = ci->getCalledFunction()->getGlobalIdentifier();
+        if(instr_start_with(fun_name, FNAME_SPECIAL))
+            add("sf", contribution); 
+        else
+            errs() << "WARNING: fan19: function " << fun_name << " not recognized\n";
+        return; 
     }
-    else if(instr_check(BITWISE, i_name)){    
-        return "bitwise";
+    // global & local memory access
+    if(const LoadInst *li = dyn_cast<LoadInst>(&inst)) {
+        unsigned address_space = li->getPointerAddressSpace();
+        if(isLocalMemoryAccess(address_space))
+            add("mem_global", contribution); 
+        if(isGlobalMemoryAccess(address_space))
+            add("mem_local", contribution);
+        return;
+    } else
+    if (const StoreInst *si = dyn_cast<StoreInst>(&inst)) {
+        unsigned address_space = si->getPointerAddressSpace();
+        if(isLocalMemoryAccess(address_space))
+            add("mem_global", contribution); 
+        if(isGlobalMemoryAccess(address_space))
+            add("mem_local", contribution);
+        return;
     }
-    else if(instr_check(AGGREGATE, i_name)){    
-        return "aggregate";
+    // ignore list: control flow
+    if(instr_check(i_name, CONTROL_FLOW) || instr_check(i_name, IGNORE) || instr_check(i_name, CAST))
+        return;    
+    // what about store?
+    errs() << "WARNING: fan19: opcode " << i_name << " not recognized\n";
+}
+
+
+void Grewe11FeatureSet::reset(){
+    raw["int"]=0;
+    raw["int4"]=0;
+    raw["float"]=0;
+    raw["float4"]=0;
+    raw["math"]=0;
+    raw["barrier"]=0;
+    raw["mem_access"]=0;
+    raw["mem_local"]=0;
+    //raw["per_local_mem"]=0;
+    //raw["per_coalesced"]=0;
+    raw["mem_coalesced"]=0;
+    //raw["comp_mem_ratio"]=0;
+    //raw["data_transfer"]=0;
+    //raw["comp_per_data"]=0;
+    //raw["workitems"]=0;
+}
+
+void Grewe11FeatureSet::eval(llvm::Instruction &inst, int contribution){
+    string i_name = inst.getOpcodeName();
+    unsigned opcode = inst.getOpcode();    
+    outs() << "  OPCODE: " << i_name << "\n";
+    // int
+    if(instr_check(i_name, INT_ADDSUB)){    add("int", contribution);   return; }
+    if(instr_check(i_name, INT_MUL)){       add("int", contribution);   return; }
+    if(instr_check(i_name, INT_DIV)){       add("int", contribution);   return; }
+    if(instr_check(i_name, BITWISE)){       add("int", contribution);   return; }
+    // float
+    if(instr_check(i_name, FLOAT_ADDSUB)){  add("float", contribution); return; }
+    if(instr_check(i_name, FLOAT_MUL)){     add("float", contribution); return; }
+    if(instr_check(i_name, FLOAT_DIV)){     add("float", contribution); return; }
+    // math (similar to Fan's special functions)
+    if (const CallInst *ci = dyn_cast<CallInst>(&inst)){
+        Function *func = ci->getCalledFunction();
+        // check intrinsic
+        if (ci->getIntrinsicID() != Intrinsic::not_intrinsic) {
+            string intrinsic_name = Intrinsic::getName(ci->getIntrinsicID()).str();
+            if(instr_check(intrinsic_name, INTRINSIC)){     
+                add("math", contribution); 
+                return; 
+            }
+            errs() << "WARNING: fan19: intrinsic " << intrinsic_name << " not recognized\n";
+        }
+        // handling function calls
+        string fun_name = ci->getCalledFunction()->getGlobalIdentifier();
+        
+        if(instr_start_with(fun_name, FNAME_SPECIAL)) // math
+            add("math", contribution); 
+        else if(instr_start_with(fun_name, BARRIER)) // barrier
+            add("barrier", contribution);
+        else
+            errs() << "WARNING: fan19: function " << fun_name << " not recognized\n";
     }
-    else if(instr_check(VECTOR, i_name)){    
-        return "vector";
-    }     
-    else if(const LoadInst *li = dyn_cast<LoadInst>(&inst)) {
-        return "load";
-        // checkAddrSpace(li->getPointerAddressSpace()); 
-        // TODO: distinguish local from global memory
-        // add("load_local"), add("load_global")
+    // mem access
+    if(const LoadInst *li = dyn_cast<LoadInst>(&inst)) {
+        add("mem_access", contribution);
+        unsigned address_space = li->getPointerAddressSpace();          
+        if(isLocalMemoryAccess(address_space))
+            add("mem_local", contribution);
+        return;
     }
+    // local mem access
     else if (const StoreInst *si = dyn_cast<StoreInst>(&inst)) {
-        return "store";
-        // checkAddrSpace(si->getPointerAddressSpace()); 
-        // TODO: distinguish local from global memory
-        // add("load_local"), add("load_global")
+        add("mem_access", contribution);
+        unsigned address_space = si->getPointerAddressSpace();          
+        if(isLocalMemoryAccess(address_space))
+            add("mem_local", contribution);
+        return;
     }
-    return "other";
+    
+    // int4 TODO
+    // float4 TODO
 }
 
 
-Grewe11FeatureSet::~Grewe11FeatureSet(){}
-
-string Grewe11FeatureSet::eval_instruction(const llvm::Instruction &inst, int contribution){
-    // TODO FIXME XXX Nadjib
-    // implementation missing
-    return "";
+void FullFeatureSet::eval(llvm::Instruction &inst, int contribution){         
+    add(inst.getOpcodeName(), contribution);
 }
 
-
-FullFeatureSet::~FullFeatureSet(){}
-
-string FullFeatureSet::eval_instruction(const llvm::Instruction &inst, int contribution){    
-    string i_name = inst.getOpcodeName();
-    if(instr_check(BIN_OPS,i_name)) {
-        return get_type_prefix(inst) + i_name;
-    }
-    return i_name;
-}
-
-
-AddressSpaceType celerity::checkAddrSpace(const unsigned addrSpaceId) {
-    /*
-    From AMD's backend: 
-    https://llvm.org/docs/AMDGPUUsage.html#amdgpu-address-spaces
-    https://llvm.org/docs/AMDGPUUsage.html#address-space-mapping
-    we have the following address space definition:
-      Address Space - Memory Space
-                  1 - Private (Scratch)
-                  2 - Local (group/LDS)
-                  3 - Global
-                 nd - Constant
-                 nd - Generic (Flat)
-                 nd - Region (GDS)
-    Note that some bakends are currently implementing only part of them. 
-    We return Global (3) for the the other the currently unmapped address space (constant, generic, region).
-    */
-    if(addrSpaceId == localAddressSpace) {
-        return AddressSpaceType::Local;
-    } else if(addrSpaceId == globalAddressSpace) {
-        return AddressSpaceType::Global;
-    } else if(addrSpaceId == privateAddressSpace) {
-        return AddressSpaceType::Private;
-    } else {
-        //std::cerr << "WARNING: unkwnown address space id: " << addrSpaceId << std::endl;
-        return AddressSpaceType::Global;
-    }
-}
 
 //-----------------------------------------------------------------------------
 // Register the available feature sets in the FeatureSet registry
