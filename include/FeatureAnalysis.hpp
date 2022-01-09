@@ -20,14 +20,12 @@ namespace celerity
 
   /// Abstract class for analyses that extract static code features.
   /// The extraction of features from a single instruction is delegated to a feature set class.
-  struct FeatureAnalysis
-  {
-
-  protected:
+  struct FeatureAnalysis {
+   protected:
     FeatureSet *features;
     string analysis_name;
   
-  public:
+   public:
     FeatureAnalysis(string feature_set = "fan19") : analysis_name("default")
     {
       features = FSRegistry::dispatch(feature_set);
@@ -39,7 +37,6 @@ namespace celerity
     FeatureSet *getFeatureSet() { return features; }
     string getName() { return analysis_name; }
      
-
     /// runs the analysis on a specific function, returns a StringMap
     using Result = ResultFeatureAnalysis;
     ResultFeatureAnalysis run(llvm::Function &fun, llvm::FunctionAnalysisManager &fam);
@@ -49,7 +46,7 @@ namespace celerity
     /// feature extraction for function
     virtual void extract(llvm::Function &fun, llvm::FunctionAnalysisManager &fam);
     /// apply feature postprocessing steps such as normalization
-    virtual void finalize();
+    virtual void finalize(llvm::Function &fun);
 
     static bool isRequired() { return true; }
 

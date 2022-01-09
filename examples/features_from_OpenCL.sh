@@ -3,13 +3,13 @@
 # tested with LLVM 12.0
 echo
 echo "$(tput setaf 1) Generating LLVM IR from generic C function and OpenCL kernels $(tput sgr 0)"
-clang -c -S -x cl -emit-llvm -cl-std=CL2.0 -Xclang -finclude-default-header samples/vecadd.cl -o samples/vecadd.bc
-clang -c -S -x cl -emit-llvm -cl-std=CL2.0 -Xclang -finclude-default-header samples/2mm.cl -o samples/2mm.bc
-clang -c -S -x cl -emit-llvm -cl-std=CL2.0 -Xclang -finclude-default-header samples/3mm.cl -o samples/3mm.bc
-clang -c -S -x cl -emit-llvm -cl-std=CL2.0 -Xclang -finclude-default-header samples/coalesced.cl -o samples/coalesced.bc
-clang -c -S -x cl -emit-llvm -cl-std=CL2.0 -Xclang -finclude-default-header samples/kmeans.cl -o samples/kmeans.bc
-clang -c -S -x cl -emit-llvm -cl-std=CL2.0 -Xclang -finclude-default-header samples/softmax_loss.cl -o samples/softmax_loss.bc
-clang -c -S -x cl -emit-llvm -cl-std=CL2.0 -Xclang -finclude-default-header samples/parboil.cl -o samples/parboil.bc
+clang -S -x cl -emit-llvm -cl-std=CL2.0 -Xclang -finclude-default-header samples/vecadd.cl -o samples/vecadd.bc
+clang -S -x cl -emit-llvm -cl-std=CL2.0 -Xclang -finclude-default-header samples/2mm.cl -o samples/2mm.bc
+clang -S -x cl -emit-llvm -cl-std=CL2.0 -Xclang -finclude-default-header samples/3mm.cl -o samples/3mm.bc
+clang -S -x cl -emit-llvm -cl-std=CL2.0 -Xclang -finclude-default-header samples/coalesced.cl -o samples/coalesced.bc
+clang -S -x cl -emit-llvm -cl-std=CL2.0 -Xclang -finclude-default-header samples/kmeans.cl -o samples/kmeans.bc
+clang -S -x cl -emit-llvm -cl-std=CL2.0 -Xclang -finclude-default-header samples/softmax_loss.cl -o samples/softmax_loss.bc
+clang -S -x cl -emit-llvm -cl-std=CL2.0 -Xclang -finclude-default-header samples/parboil.cl -o samples/parboil.bc
 clang -S -emit-llvm samples/simple_loop.c -o samples/simple_loop.bc
 
 echo

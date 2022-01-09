@@ -30,7 +30,7 @@ llvm::PassPluginLibraryInfo getFeatureExtractionPassPluginInfo()
       LLVM_PLUGIN_API_VERSION, "FeatureAnalysis", LLVM_VERSION_STRING,
       [](PassBuilder &PB)
       {
-        outs() << "plugin pass registration \n";
+        //outs() << "plugin pass registration \n";
         // #1 REGISTRATION FOR "opt -passes=print<feature>"
         // Register FeaturePrinterPass so that it can be used when specifying pass pipelines with `-passes=`.
         PB.registerPipelineParsingCallback(
@@ -60,7 +60,7 @@ llvm::PassPluginLibraryInfo getFeatureExtractionPassPluginInfo()
         PB.registerAnalysisRegistrationCallback(
             [](FunctionAnalysisManager &FAM)
             {
-              FAM.registerPass([&] { return DefaultFeatureAnalysis(); });              
+              FAM.registerPass([&] { return DefaultFeatureAnalysis("grewe11"); });              
               FAM.registerPass([&] { return Kofler13Analysis(); });
               FAM.registerPass([&] { return PolFeatAnalysis(); });
             });

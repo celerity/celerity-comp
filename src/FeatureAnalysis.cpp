@@ -33,14 +33,16 @@ void FeatureAnalysis::extract(llvm::Function &fun, llvm::FunctionAnalysisManager
 {
   KernelInvariant ki(fun);
   ki.print(llvm::outs());
-  
+
+
   for (llvm::BasicBlock &bb : fun)
     extract(bb);
 }
 
-void FeatureAnalysis::finalize()
+void FeatureAnalysis::finalize(llvm::Function &fun)
 {
-  normalize(*features);
+  //normalize(*features);
+  features->normalize(fun);
 }
 
 ResultFeatureAnalysis FeatureAnalysis::run(llvm::Function &fun, llvm::FunctionAnalysisManager &fam)
@@ -48,6 +50,6 @@ ResultFeatureAnalysis FeatureAnalysis::run(llvm::Function &fun, llvm::FunctionAn
   outs() << "function: " << fun.getName().str() << " feature-set: " << features->getName() << " analysis-name: " << getName() << "\n";
   features->reset();
   extract(fun, fam);
-  finalize();
+  finalize(fun);
   return ResultFeatureAnalysis { features->getFeatureCounts(), features->getFeatureValues() };
 }

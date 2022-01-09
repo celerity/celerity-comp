@@ -23,10 +23,16 @@ Requirements
   ```console
   sudo apt install cmake cmake-curses-gui
   ```
-  * Clang/LLVM: tested with LLVM version 12.0 
+  * Clang/LLVM: tested with LLVM version 12.0 (check how to do it in your preferred linux distro)
   ```console
-  sudo apt install clang llvm
+  sudo apt install clang-12 llvm-12
   ```
+
+* Required for more accurate PolFeat features 
+  ```console
+  sudo apt install libflint-dev
+  ```
+
 
 Installation
 ============  

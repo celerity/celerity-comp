@@ -2,16 +2,9 @@
 
 #include <type_traits>
 
-//#include <llvm/Analysis/LoopInfo.h>
-//#include <llvm/Analysis/ScalarEvolution.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/BasicBlock.h>
-//#include <llvm/IR/PassManager.h>
 #include <llvm/IR/Module.h>
-//#include <llvm/Pass.h>
-//#include <llvm/Passes/PassBuilder.h>
-//#include <llvm/Passes/PassPlugin.h>
-//#include <llvm/Transforms/IPO/PassManagerBuilder.h>
 using namespace llvm;
 
 #include "FeatureSet.hpp"
@@ -24,7 +17,7 @@ using namespace llvm;
 namespace celerity {
 
 /// Pass that print the results of a FeatureAnalysis
-template <typename AnalysisType> //  = FeatureAnalysis
+template <typename AnalysisType> 
 struct FeaturePrinterPass : public llvm::PassInfoMixin<celerity::FeaturePrinterPass<AnalysisType> > {
    static_assert(std::is_base_of<FeatureAnalysis, AnalysisType>::value, "AnalysisType must derive from FeatureAnalysis");
 
@@ -39,14 +32,14 @@ struct FeaturePrinterPass : public llvm::PassInfoMixin<celerity::FeaturePrinterP
       ResultFeatureAnalysis &feature_set = fam.getResult<AnalysisType>(fun);    
       
       out_stream.changeColor(llvm::raw_null_ostream::Colors::WHITE, true);
-      print_feature_names(feature_set.feat, out_stream);
+      print_feature_names(feature_set.raw, out_stream);
       out_stream.changeColor(llvm::raw_null_ostream::Colors::WHITE, false);
       print_feature_values(feature_set.raw, out_stream);
-
       out_stream.changeColor(llvm::raw_null_ostream::Colors::WHITE, true);
       print_feature_names(feature_set.feat, out_stream);
       out_stream.changeColor(llvm::raw_null_ostream::Colors::WHITE, false);
       print_feature_values(feature_set.feat, out_stream);
+      
       return PreservedAnalyses::all();
    }
 

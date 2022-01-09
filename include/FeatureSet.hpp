@@ -1,8 +1,11 @@
 #pragma once
 
 #include <string>
+#include <iomanip>
 #include <iostream>
 #include <sstream>
+#include <type_traits>
+#include <cstdint>
 using namespace std;
 
 #include <llvm/IR/Instructions.h>
@@ -51,7 +54,7 @@ public:
     }
 
     virtual void eval(llvm::Instruction &inst, int contribution = 1) = 0;
-    virtual void normalize();
+    virtual void normalize(llvm::Function &fun);
     virtual void print(llvm::raw_ostream &out_stream);     
 };
 
@@ -62,16 +65,18 @@ class Fan19FeatureSet : public FeatureSet {
     Fan19FeatureSet() : FeatureSet("fan19"){}
     virtual ~Fan19FeatureSet(){}
     virtual void reset();
-    virtual void eval(llvm::Instruction &inst, int contribution = 1);    
+    virtual void eval(llvm::Instruction &inst, int contribution = 1);   
+     
 };
 
 /// Feature set used by Grewe & O'Boyle. It is very generic and mainly designed to catch mem. vs comp. 
 class Grewe11FeatureSet : public FeatureSet {
  public:
-    Grewe11FeatureSet() : FeatureSet("grewe13"){}
+    Grewe11FeatureSet() : FeatureSet("grewe11"){}
     virtual ~Grewe11FeatureSet(){}
     virtual void reset();
     virtual void eval(llvm::Instruction &inst, int contribution = 1);
+    virtual void normalize(llvm::Function &fun);
 }; 
 
 /// Feature set used by Fan, designed for GPU architecture. 
@@ -86,40 +91,42 @@ class FullFeatureSet : public FeatureSet {
 /// Registry of feature sets
 using FSRegistry = Registry<celerity::FeatureSet*>;
 
-/// Printing functions
-/// Print all features in a nicely formatted table
-template <typename T>
-void print_features(llvm::StringMap<T> &feature_map, llvm::raw_ostream &out_stream){
-    auto keys = feature_map.keys();
-    stringstream ss;
-    for(StringRef &f : keys){
-        ss << "  " << f.str() <<": " << feature_map[f] << "\n";
-    }
-    out_stream << ss.str();
-}
 
+/// Printing utilities
 /// Print all feature names in one line
 template <typename T>
 void print_feature_names(llvm::StringMap<T> &feature_map, llvm::raw_ostream &out_stream){
     auto keys = feature_map.keys();
     stringstream ss;
     for(StringRef &f : keys){
-        ss << /*ss.width(9) << ss.fill(' ') <<*/ f.str() << " ";
+        ss << std::setw(7) << f.str() << " ";
     }
     ss << "\n";
     out_stream << ss.str();
 }
 
-/// Print all feature values in one line
+/// Print all feature unsigned values in one line
 template <typename T>
 void print_feature_values(llvm::StringMap<T> &feature_map, llvm::raw_ostream &out_stream){
     auto keys = feature_map.keys();
     stringstream ss;    
     for(StringRef &f : keys){
-        ss << /*ss.width(7) << ss.fill(' ') <<*/ feature_map[f] << " ";
+        if constexpr(std::is_same<float,T>::value){            
+            ss << std::setprecision(3) 
+               << std::setfill(' ') 
+               << std::setw(7);
+        }
+        else
+            ss <<  std::setw(7);  
+        ss << feature_map[f] << " ";
     }
     ss << "\n";
     out_stream << ss.str();
 }
+
+
+/// Demangling utilties
+string get_demangled_name(const llvm::CallInst &call_inst);
+
 
 } // end namespace celerity

@@ -21,7 +21,7 @@ llvm::AnalysisKey Kofler13Analysis::Key;
 /// Feature extraction based on Kofler et al. 13 loop heuristics
 void Kofler13Analysis::extract(llvm::Function &fun, llvm::FunctionAnalysisManager &FAM)
 {
-    std::cout << "extract on function " << fun.getName().str() << "\n";
+    outs() << "extract on function " << fun.getName().str() << "\n";
     // skip the function if is only a declaration
     if (fun.isDeclaration()) return;
     ScalarEvolution       &SE = FAM.getResult<ScalarEvolutionAnalysis>(fun);

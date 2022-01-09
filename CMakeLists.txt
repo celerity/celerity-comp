@@ -2,6 +2,8 @@ cmake_minimum_required (VERSION 3.13.4)
 project(Celerity_Comp)
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}" "${PROJECT_SOURCE_DIR}/cmake")
 
 # Requires LLVM
 find_package(LLVM 12.0.0 REQUIRED CONFIG PATHS /usr/lib/llvm-12/lib )
@@ -9,49 +11,47 @@ find_package(LLVM 12.0.0 REQUIRED CONFIG PATHS /usr/lib/llvm-12/lib )
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 message(STATUS "Found LLVM Tools in ${LLVM_TOOLS_BINARY_DIR}")
+find_package(FLINT)
 
-include_directories(${LLVM_INCLUDE_DIRS} "${PROJECT_SOURCE_DIR}/include")
 separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
 add_definitions(${LLVM_DEFINITIONS_LIST})
 
 # optional: enable support for polynomial cost relations
 option(EXTRACTOR_TOOL "Build the external feature extractor tool" ON)
-# optional: install sample scripts for several 
-
+# optional: support more advanced and accurate feature peresentation
 option(POLFEAT "Support for polynomial features" ON)
 # optional: install sample scripts for several 
 option(SAMPLE_SCRIPTS "Install sample scripts for C functions, OpenCL and SYCL" ON)
 # optional: Celerity runtime integration 
 option(CELERITY_RUNTIME "Install the integration layer for Celerity (requires existing Celerity Runtime installation)" OFF)
-# TODO: 3opts: only LLVM passes, only external tool, both
 
-# include & sources
-set(FEATURE_INCLUDE 
-  include/FeaturePrinter.hpp   include/FeatureSet.hpp       include/KernelInvariant.hpp  
-  include/FeatureAnalysis.hpp  include/Kofler13Analysis.hpp include/DefaultFeatureAnalysis.hpp
-  include/FeatureNormalization.hpp )
+# Sources
 set(FEATURE_SRC 
-  src/FeatureSet.cpp           src/FeaturePrinter.cpp        
-  src/FeatureAnalysis.cpp      src/Kofler13Analysis.cpp     src/DefaultFeatureAnalysis.cpp 
-  src/FeatureAnalysisPlugin.cpp )
+  src/FeatureSet.cpp           src/FeaturePrinter.cpp      src/FeatureAnalysisPlugin.cpp  
+  src/FeatureAnalysis.cpp      src/Kofler13Analysis.cpp    src/DefaultFeatureAnalysis.cpp  )
 
 # Support for polynomial features 
 if(POLFEAT)
-  set(FEATURE_INCLUDE ${FEATURE_INCLUDE}  include/PolFeatAnalysis.hpp)
-  set(FEATURE_SRC     ${FEATURE_SRC}      src/PolFeatAnalysis.cpp)
+  set(EXTRA_INCLUDE        ${FLINT_INCLUDE_DIRS}/flint )
+  set(FEATURE_SRC          ${FEATURE_SRC}      src/PolFeatAnalysis.cpp)
+  set(EXTRA_LIB            ${FLINT_LIBRARIES})
 endif(POLFEAT)
+ 
+# Add includes
+include_directories(${LLVM_INCLUDE_DIRS} "${PROJECT_SOURCE_DIR}/include" ${EXTRA_INCLUDE})
 
 # Build the feature extraction tool 
 if(EXTRACTOR_TOOL)
   add_executable(feature_ext ${FEATURE_SRC} src/feature_tool.cpp)
   llvm_map_components_to_libnames(llvm_libs support passes core irreader analysis)
-  target_link_libraries(feature_ext ${llvm_libs})
+  target_link_libraries(feature_ext ${llvm_libs} ${EXTRA_LIB})
   target_compile_options(feature_ext PUBLIC -Wl,-znodelete)
-  #target_compile_options(feature_ext PRIVATE -Wl,-znodelete)
-endif(EXTRACTOR_TOOL)
+  #target_include_directories(feature_ext ${LLVM_INCLUDE_DIRS} ${FLINT_INCLUDE_DIR} "${PROJECT_SOURCE_DIR}/include")
+ endif(EXTRACTOR_TOOL)
 
 # Build the LLVM pass to be used with the optimizer
 add_library(feature_pass MODULE ${FEATURE_SRC})
+#target_include_directories(feature_pass ${LLVM_INCLUDE_DIRS} ${FLINT_INCLUDE_DIR} "${PROJECT_SOURCE_DIR}/include")
 
 # Build the integration layer to be used with the Celerity runtime
 if(CELERITY_RUNTIME)

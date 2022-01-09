@@ -17,7 +17,8 @@ struct DefaultFeatureAnalysis : public FeatureAnalysis, llvm::AnalysisInfoMixin<
  public:
     DefaultFeatureAnalysis(string feature_set = "fan19") { 
       analysis_name="default";
-      features = FSRegistry::dispatch(feature_set);      
+      features = FSRegistry::dispatch(feature_set);
+      assert(features != nullptr);      
     }
     virtual ~DefaultFeatureAnalysis(){}
 
