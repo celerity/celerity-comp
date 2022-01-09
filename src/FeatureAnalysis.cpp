@@ -47,9 +47,26 @@ void FeatureAnalysis::finalize(llvm::Function &fun)
 
 ResultFeatureAnalysis FeatureAnalysis::run(llvm::Function &fun, llvm::FunctionAnalysisManager &fam)
 {
-  outs() << "function: " << fun.getName().str() << " feature-set: " << features->getName() << " analysis-name: " << getName() << "\n";
+  // nicely printing analysis params
+  llvm::raw_ostream &debug = outs();
+  debug.changeColor(llvm::raw_null_ostream::Colors::YELLOW, true);
+  debug << "function: ";
+  debug.changeColor(llvm::raw_null_ostream::Colors::WHITE, false);
+  debug << fun.getName().str();
+  debug.changeColor(llvm::raw_null_ostream::Colors::YELLOW, true);
+  debug << " feature-set: ";
+  debug.changeColor(llvm::raw_null_ostream::Colors::WHITE, false);
+  debug << features->getName();
+  debug.changeColor(llvm::raw_null_ostream::Colors::YELLOW, true);
+  debug << " analysis-name: ";
+  debug.changeColor(llvm::raw_null_ostream::Colors::WHITE, false);
+  debug << getName() << "\n";
+  
+  // reset all feature values
   features->reset();
+  // feature extraction
   extract(fun, fam);
+  // feature post-processing (e.g., normalization)
   finalize(fun);
   return ResultFeatureAnalysis { features->getFeatureCounts(), features->getFeatureValues() };
 }

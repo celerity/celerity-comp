@@ -251,13 +251,12 @@ void Grewe11FeatureSet::eval(llvm::Instruction &inst, int contribution){
 }
 
 void Grewe11FeatureSet::normalize(llvm::Function &fun){
-  CoalescedMemAccess ret = getCoalescedMemAccess(fun);
-  //outs() << " *** " << raw["mem_acc"] << "/" << ret.mem_access;
+  CoalescedMemAccess ret = getCoalescedMemAccess(fun);  
   //assert(ret.mem_access == raw["mem_acc"]);
-  if(ret.mem_access ==0)
-    feat["mem_coal"] = 0;
+  if(ret.mem_access == 0)
+    feat["mem_coal"] = 0.f;
   else
-    feat["mem_coal"] = ret.mem_coalesced / ret.mem_access;
+    feat["mem_coal"] = float(ret.mem_coalesced) / float(ret.mem_access);
   
 }
 

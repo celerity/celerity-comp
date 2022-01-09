@@ -1,10 +1,13 @@
 #pragma once
 
+#include <stack>
+
 #include <llvm/IR/Argument.h>
 #include <llvm/IR/Operator.h>
 #include <llvm/IR/Intrinsics.h>
 #include <llvm/IR/Instruction.h>
 #include <llvm/IR/BasicBlock.h>
+//0#include <llvm/IR/InstrTypes.h>
 #include <llvm/Support/MemoryBuffer.h>
 
 #include "FeatureSet.hpp" // for demanglng utility
@@ -21,15 +24,17 @@ struct CoalescedMemAccess {
 /// Uses a simple heuristics to calculate how many mem access are coalesced
 CoalescedMemAccess getCoalescedMemAccess(Function &fun) {
     CoalescedMemAccess cma = {0, 0};
-    outs() << "getCoalescedMemAccess\n"; 
+    llvm::raw_ostream &debug = outs(); // raw_null_ostream;
+    debug.changeColor(llvm::raw_null_ostream::Colors::MAGENTA, true);
+    debug << "coalesced mem access: "; 
+    debug.changeColor(llvm::raw_null_ostream::Colors::WHITE, false);
     // 1. Search for pointer arguments   
     std::set<GetElementPtrInst*> gep_set;
     for (unsigned i=0; i< fun.arg_size(); i++) {            
         llvm::Argument* arg = fun.getArg(i);
         // if we have a pointer, it cannot be used for loop bound analysis, thus we skip it
         if(arg->getType()->isPointerTy()){
-            //outs() << "argument" << i << " user\n";
-            // 2. Collect  uses of the pointer argument
+            // 2. Collect all uses of the pointer argument as gep
             for (User *user : arg->users()) {
                 if (GetElementPtrInst *gep = dyn_cast<GetElementPtrInst>(user)) {
                     //outs() << "  gep:" << *gep << "\n";
@@ -45,18 +50,33 @@ CoalescedMemAccess getCoalescedMemAccess(Function &fun) {
             if (const CallInst *call_inst = dyn_cast<CallInst>(&inst)){
                 string fun_name = call_inst->getCalledFunction()->getGlobalIdentifier();
                 if(fun_name.find("get_global_id")!= std::string::npos){
-                    //outs() << "global_id\n";
-                    // 4. For each use..                    
-                    for (const User *user : call_inst->users()) {
-                        //outs() << "  *uses* " << *user << "\n";     
-                        // 5. ...we check if corresponds to the gep operand
+                    //debug << "global_id\n";
+                    // 4. We collcet all uses of <get_global_id> 
+                    std::stack<const User*> id_worklist;  
+                    for(const User *user : call_inst->users()) {
+                        id_worklist.push(user);
+                    }
+                    // 5. Iterate over all uses until we found one of our presaved geps
+                    while(!id_worklist.empty()){
+                        const User *id_use = id_worklist.top();
+                        id_worklist.pop();
+                        // 5a. we follow the use in case of shl instruction  (e.g., integer casted to int)
+                        if(const  BinaryOperator *shl = dyn_cast<BinaryOperator>(id_use))
+                        if(shl->getOpcode() == Instruction::Shl)
+                        {
+                            //debug << "  *follow uses of int-to-unsigned cast* " << "\n";                                 
+                            for (const User *shl_user : shl->users()) 
+                                id_worklist.push(shl_user);
+                            continue;
+                        }
+                        // 5b. we check if the use corresponds to the pre-saved gep 
                         for(GetElementPtrInst* gep : gep_set){
-                            if(user == gep->getOperand(1)){
-                                outs() << "  *coalesced for global id* " << "\n";     
+                            if(id_use == gep->getOperand(1)){
+                                //debug << "  *coalesced for global id*\n";     
                                 cma.mem_coalesced++;
                             }
-                        }
-                    }
+                        }                        
+                    } // end while worklist
                 }
             }
         }
@@ -65,10 +85,12 @@ CoalescedMemAccess getCoalescedMemAccess(Function &fun) {
     for(GetElementPtrInst* gep : gep_set){
         const Value *gep_op = gep->getOperand(1);
         if(const ConstantInt *cont_int = dyn_cast<ConstantInt>(gep_op)){
-            outs() << "  *coalesced for constant* " << "\n";     
+            //debug << "  *coalesced for constant* " << "\n";     
             cma.mem_coalesced++; 
         }
     }
+    assert(cma.mem_coalesced <= cma.mem_access);
+    debug << cma.mem_coalesced << "/" << cma.mem_access << "\n"; 
     return cma;
 }
 
