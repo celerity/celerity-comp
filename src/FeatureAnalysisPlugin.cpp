@@ -41,7 +41,8 @@ llvm::PassPluginLibraryInfo getFeatureExtractionPassPluginInfo()
               {
                 FPM.addPass(FeaturePrinterPass<DefaultFeatureAnalysis>(llvm::outs())); 
                 FPM.addPass(LCSSAPass());                
-                FPM.addPass(FeaturePrinterPass<Kofler13Analysis>(llvm::outs())); // 
+                FPM.addPass(FeaturePrinterPass<Kofler13Analysis>(llvm::outs())); 
+                //PM.addPass(FeaturePrinterPass<PolFeatAnalysis>(llvm::outs()));
                 return true;
               }
               return false;
@@ -54,6 +55,7 @@ llvm::PassPluginLibraryInfo getFeatureExtractionPassPluginInfo()
               PM.addPass(FeaturePrinterPass<DefaultFeatureAnalysis>(llvm::outs()));
               PM.addPass(LCSSAPass());                
               PM.addPass(FeaturePrinterPass<Kofler13Analysis>(llvm::outs()));
+              //PM.addPass(FeaturePrinterPass<PolFeatAnalysis>(llvm::outs()));
             });
         // #3 REGISTRATION FOR "FAM.getResult<FeatureAnalysis>(Func)"
         // Register FeatureAnalysis as an analysis pass, so that FeaturePrinterPass can request the results of FeatureAnalysis.

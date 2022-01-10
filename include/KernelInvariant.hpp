@@ -30,6 +30,7 @@ enum InvariantType {
     none // value used for returning invalid invariant
 };
 
+static unsigned InvariantTypeNum = 21;
 static const char *InvariantTypeName[] = {
     "a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7", "a8", "a9", 
     "gs0", "gs1", "gs2",
@@ -44,6 +45,8 @@ static const char *InvariantTypeName[] = {
 /// Invariants are store in a map that associates the InvariantType to a a Value. 
 ///  Assume uniform work-group size
 struct KernelInvariant {
+ public:
+    
 
  private:
     llvm::Function *function;
@@ -133,10 +136,13 @@ struct KernelInvariant {
     } // end ctor
 
 
-    /// Return the i for the x_i referring to the variable named
-    /// designed to be consistend among differnt kernels
-    unsigned enumerate(enum InvariantType &it){
+    /// Return an int for an enumerated invariant type
+    static unsigned enumerate(enum InvariantType it){
         return it;
+    }
+    /// Return the number of invariant type
+    static unsigned numInvariantType(){
+        return InvariantTypeNum;
     }
 
     std::map<InvariantType,llvm::Value*> getInvariants(){
@@ -169,7 +175,6 @@ struct KernelInvariant {
         }            
         out_stream << "\n";
     }
-
 
 }; // end struct
 

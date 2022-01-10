@@ -7,14 +7,12 @@ set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}" "${PROJECT_SOURCE_DIR}/cmake")
 
 # Requires LLVM
 find_package(LLVM 12.0.0 REQUIRED CONFIG PATHS /usr/lib/llvm-12/lib )
-#find_package(LLVM REQUIRED CONFIG NO_DEFAULT_PATH)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 message(STATUS "Found LLVM Tools in ${LLVM_TOOLS_BINARY_DIR}")
-find_package(FLINT)
 
-separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
-add_definitions(${LLVM_DEFINITIONS_LIST})
+#separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
+#add_definitions(${LLVM_DEFINITIONS_LIST})
 
 # optional: enable support for polynomial cost relations
 option(EXTRACTOR_TOOL "Build the external feature extractor tool" ON)
@@ -32,7 +30,8 @@ set(FEATURE_SRC
 
 # Support for polynomial features 
 if(POLFEAT)
-  set(EXTRA_INCLUDE        ${FLINT_INCLUDE_DIRS}/flint )
+  find_package(FLINT REQUIRED)
+  set(EXTRA_INCLUDE        ${FLINT_INCLUDE_DIRS} )
   set(FEATURE_SRC          ${FEATURE_SRC}      src/PolFeatAnalysis.cpp)
   set(EXTRA_LIB            ${FLINT_LIBRARIES})
 endif(POLFEAT)
@@ -51,6 +50,7 @@ if(EXTRACTOR_TOOL)
 
 # Build the LLVM pass to be used with the optimizer
 add_library(feature_pass MODULE ${FEATURE_SRC})
+
 #target_include_directories(feature_pass ${LLVM_INCLUDE_DIRS} ${FLINT_INCLUDE_DIR} "${PROJECT_SOURCE_DIR}/include")
 
 # Build the integration layer to be used with the Celerity runtime

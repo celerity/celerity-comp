@@ -28,11 +28,8 @@ Requirements
   sudo apt install clang-12 llvm-12
   ```
 
-* Required for more accurate PolFeat features 
-  ```console
-  sudo apt install libflint-dev
-  ```
-
+  * (Optional) Libflint 2.8 required for more accurate features
+ 
 
 Installation
 ============  

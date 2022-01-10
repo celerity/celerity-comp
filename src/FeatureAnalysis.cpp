@@ -34,7 +34,6 @@ void FeatureAnalysis::extract(llvm::Function &fun, llvm::FunctionAnalysisManager
   KernelInvariant ki(fun);
   ki.print(llvm::outs());
 
-
   for (llvm::BasicBlock &bb : fun)
     extract(bb);
 }
@@ -64,6 +63,8 @@ ResultFeatureAnalysis FeatureAnalysis::run(llvm::Function &fun, llvm::FunctionAn
   
   // reset all feature values
   features->reset();
+  // skip the function if it is only a declaration
+  if (fun.isDeclaration()) return ResultFeatureAnalysis { features->getFeatureCounts(), features->getFeatureValues() };
   // feature extraction
   extract(fun, fam);
   // feature post-processing (e.g., normalization)

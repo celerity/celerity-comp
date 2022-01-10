@@ -21,9 +21,6 @@ llvm::AnalysisKey Kofler13Analysis::Key;
 /// Feature extraction based on Kofler et al. 13 loop heuristics
 void Kofler13Analysis::extract(llvm::Function &fun, llvm::FunctionAnalysisManager &FAM)
 {
-    outs() << "extract on function " << fun.getName().str() << "\n";
-    // skip the function if is only a declaration
-    if (fun.isDeclaration()) return;
     ScalarEvolution       &SE = FAM.getResult<ScalarEvolutionAnalysis>(fun);
     LoopInfo              &LI = FAM.getResult<LoopAnalysis>(fun);
     DominatorTree         &DT = FAM.getResult<DominatorTreeAnalysis>(fun);
@@ -50,25 +47,23 @@ void Kofler13Analysis::extract(llvm::Function &fun, llvm::FunctionAnalysisManage
         if (loop->getExitingBlock() != Latch)  errs() << " WARNING Loop: Exiting and latch block are different\n";
     }
 
-    // 1. for each BB, we initialize it's "loop multiplier" to 1
+    // 1. For each BB, we initialize it's "loop multiplier" to 1
     std::unordered_map<const llvm::BasicBlock *, unsigned> multiplier;
     for (const BasicBlock &bb : fun.getBasicBlockList()) {
         multiplier[&bb] = 1.0f;
     }
-
+    // 2. For each, we cacluate the loop contribution
     std::map<Loop*, int> loop_cost;
     for (Loop *loop : LI.getLoopsInPreorder()) {
         loop_cost[loop] = loopContribution(*loop, LI, SE);
     }
-
-    // 2. for each BB in a loop, we multiply that "loop multiplier" times 100
+    // 3. For each BB in a loop, we multiply that "loop multiplier" times the loop cost
     for (Loop *loop : LI.getLoopsInPreorder()) {
         for (BasicBlock *bb : loop->getBlocks()) { // TODO: shold we only count the body?
             multiplier[bb] *= loop_cost[loop];
         }
-    } // for
-
-    /// 3. evaluation
+    } 
+    // 4. Final evaluation
     for (llvm::BasicBlock &bb : fun) {
         int mult = multiplier[&bb];
         //outs() << "BB mult: " << mult << "\n";
