@@ -23,13 +23,16 @@ Requirements
   ```console
   sudo apt install cmake cmake-curses-gui
   ```
-  * Clang/LLVM: tested with LLVM version 12.0 (check how to do it in your preferred linux distro)
+  * Clang/LLVM: required at least LLVM version 12.0
   ```console
-  sudo apt install clang-12 llvm-12
+  sudo apt install clang-12 llvm-12  ```
+
+  * (Optional) Libflint is required for more accurate features (polfeat). Note that older versions of libflint do not support multivariate polynomials.
+ ```console
+  sudo apt install libflint-2.6.3 libflint-dev zlib1g-dev
   ```
 
-  * (Optional) Libflint 2.8 required for more accurate features
- 
+
 
 Installation
 ============  
