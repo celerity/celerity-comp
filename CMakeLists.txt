@@ -10,6 +10,7 @@ find_package(LLVM 12.0.0 REQUIRED CONFIG PATHS /usr/lib/llvm-12/lib )
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 message(STATUS "Found LLVM Tools in ${LLVM_TOOLS_BINARY_DIR}")
+llvm_map_components_to_libnames(llvm_libs support passes core irreader analysis)
 
 #separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
 #add_definitions(${LLVM_DEFINITIONS_LIST})
@@ -31,9 +32,13 @@ set(FEATURE_SRC
 # Support for polynomial features 
 if(POLFEAT)
   find_package(FLINT REQUIRED)
-  set(EXTRA_INCLUDE        ${FLINT_INCLUDE_DIRS} )
-  set(FEATURE_SRC          ${FEATURE_SRC}      src/PolFeatAnalysis.cpp)
+  set(EXTRA_INCLUDE        ${FLINT_INCLUDE_DIRS}  )
+  set(FEATURE_SRC          ${FEATURE_SRC}     src/KernelInvariant.cpp  src/PolFeatAnalysis.cpp  src/IMPoly.cpp)
   set(EXTRA_LIB            ${FLINT_LIBRARIES})
+  # impoly test function 
+  add_executable(test_impoly ${FEATURE_SRC} src/test_impoly.cpp)
+  target_link_libraries(test_impoly ${llvm_libs} ${EXTRA_LIB})
+  target_compile_options(test_impoly PUBLIC -Wl,-znodelete)
 endif(POLFEAT)
  
 # Add includes
@@ -41,8 +46,7 @@ include_directories(${LLVM_INCLUDE_DIRS} "${PROJECT_SOURCE_DIR}/include" ${EXTRA
 
 # Build the feature extraction tool 
 if(EXTRACTOR_TOOL)
-  add_executable(feature_ext ${FEATURE_SRC} src/feature_tool.cpp)
-  llvm_map_components_to_libnames(llvm_libs support passes core irreader analysis)
+  add_executable(feature_ext ${FEATURE_SRC} src/feature_tool.cpp) 
   target_link_libraries(feature_ext ${llvm_libs} ${EXTRA_LIB})
   target_compile_options(feature_ext PUBLIC -Wl,-znodelete)
   #target_include_directories(feature_ext ${LLVM_INCLUDE_DIRS} ${FLINT_INCLUDE_DIR} "${PROJECT_SOURCE_DIR}/include")
