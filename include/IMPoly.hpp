@@ -24,6 +24,8 @@ namespace celerity
     IMPoly(); 
     /// Polynominal initialized with a single term: <coeff> * x_invariant ^ exponent
     IMPoly(unsigned coeff, unsigned invariant, unsigned exponent = 1); 
+    /// Copy constructor
+    IMPoly(const IMPoly &); 
     /// Dtor
     ~IMPoly();
 
@@ -31,14 +33,15 @@ namespace celerity
     std::string str() const;
     //unsigned evaluate(int []) const;
 
-    static IMPoly abs(IMPoly const &poly);
-    static IMPoly max(IMPoly const &poly1, IMPoly const &poly2);
+    void abs();
+    void divide_by_two();
 
-    IMPoly& operator+=(IMPoly const &poly);
-    IMPoly& operator-=(IMPoly const &poly);
-    IMPoly& operator*=(IMPoly const &poly);
-    IMPoly& operator=(const IMPoly& other);
+    static IMPoly max(const IMPoly &poly1, const IMPoly &poly2);
 
+    IMPoly& operator+=(const IMPoly &poly);
+    IMPoly& operator-=(const IMPoly &poly);
+    IMPoly& operator*=(const IMPoly &poly);
+    IMPoly& operator= (const IMPoly & other);
 
     friend IMPoly operator+(IMPoly lhs, const IMPoly& rhs){
       lhs += rhs; // reuse compound assignment
@@ -49,10 +52,8 @@ namespace celerity
       lhs -= rhs; 
       return lhs; 
     }
-
     
-    friend std::ostream &operator<<(std::ostream &output, const IMPoly &rhs)
-    {
+    friend std::ostream &operator<<(std::ostream &output, const IMPoly &rhs){
       output << rhs.str();
       return output;
     }
