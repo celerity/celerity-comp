@@ -1,35 +1,32 @@
 #pragma once
 
-#include <type_traits>
-
 #include <llvm/IR/Function.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Module.h>
 using namespace llvm;
 
 #include "FeatureSet.hpp"
-#include "FeatureAnalysis.hpp"
-#include "FeaturePrinter.hpp"
-#include "FeatureNormalization.hpp"
+#include "PolFeatAnalysis.hpp"
 
-
+//#include "FeatureAnalysis.hpp"
+//#include "FeaturePrinter.hpp"
+//#include "FeatureNormalization.hpp"
 
 namespace celerity {
 
-// Pass printing the results of a feature analysis.
-template <typename AnalysisType> 
-struct FeaturePrinterPass : public llvm::PassInfoMixin<celerity::FeaturePrinterPass<AnalysisType> > {
-   static_assert(std::is_base_of<FeatureAnalysis, AnalysisType>::value, "AnalysisType must derive from FeatureAnalysis");
+
+// Pass printing the results of a polynomial feature analysis. 
+struct PolFeatPrinterPass : public llvm::PassInfoMixin<PolFeatPrinterPass> {
 
  public:
-   explicit FeaturePrinterPass(llvm::raw_ostream &stream) : out_stream(stream) {}
+   explicit PolFeatPrinterPass(llvm::raw_ostream &stream) : out_stream(stream) {}
 
    llvm::PreservedAnalyses run(llvm::Function &fun, llvm::FunctionAnalysisManager &fam) {
       out_stream.changeColor(llvm::raw_null_ostream::Colors::MAGENTA);
-      out_stream << "Print features for function: " << fun.getName() << "\n";
+      out_stream << "Print polynomial features for function: " << fun.getName() << "\n";
       out_stream.changeColor(llvm::raw_null_ostream::Colors::YELLOW);
 
-      ResultFeatureAnalysis &feature_set = fam.getResult<AnalysisType>(fun);    
+      ResultPolFeatSet &feature_set = fam.getResult<PolFeatAnalysis>(fun);    
       
       out_stream.changeColor(llvm::raw_null_ostream::Colors::WHITE, true);
       print_feature_names(feature_set.raw, out_stream);
@@ -49,4 +46,5 @@ struct FeaturePrinterPass : public llvm::PassInfoMixin<celerity::FeaturePrinterP
     llvm::raw_ostream &out_stream;
 };
 
-} // end namespace celerity
+
+} // celerity

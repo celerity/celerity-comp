@@ -1,3 +1,4 @@
+#include <map>
 #include <iostream>
 using namespace std;
 
@@ -44,6 +45,8 @@ int main(){
     cout << " * max("<< test5 << "," << test6 << ") = ";
     IMPoly test7 = IMPoly::max(test5, test6);  
     cout << test7 << endl;
+
+    std::map<InvariantType,float> runtime_values;
 
     return 0;
 }

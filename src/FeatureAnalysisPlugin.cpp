@@ -16,9 +16,10 @@ using namespace std;
 using namespace llvm;
 
 #include "DefaultFeatureAnalysis.hpp"
-#include "PolFeatAnalysis.hpp"
+//#include "PolFeatAnalysis.hpp"
 #include "Kofler13Analysis.hpp"
 #include "FeaturePrinter.hpp"
+#include "PolFeatPrinter.hpp"
 using namespace celerity;
 
 //-----------------------------------------------------------------------------
@@ -42,7 +43,7 @@ llvm::PassPluginLibraryInfo getFeatureExtractionPassPluginInfo()
                 FPM.addPass(FeaturePrinterPass<DefaultFeatureAnalysis>(llvm::outs())); 
                 FPM.addPass(LCSSAPass());                
                 FPM.addPass(FeaturePrinterPass<Kofler13Analysis>(llvm::outs())); 
-                //PM.addPass(FeaturePrinterPass<PolFeatAnalysis>(llvm::outs()));
+                FPM.addPass(PolFeatPrinterPass(llvm::outs()));
                 return true;
               }
               return false;
@@ -55,7 +56,7 @@ llvm::PassPluginLibraryInfo getFeatureExtractionPassPluginInfo()
               PM.addPass(FeaturePrinterPass<DefaultFeatureAnalysis>(llvm::outs()));
               PM.addPass(LCSSAPass());                
               PM.addPass(FeaturePrinterPass<Kofler13Analysis>(llvm::outs()));
-              //PM.addPass(FeaturePrinterPass<PolFeatAnalysis>(llvm::outs()));
+              PM.addPass(PolFeatPrinterPass(llvm::outs()));
             });
         // #3 REGISTRATION FOR "FAM.getResult<FeatureAnalysis>(Func)"
         // Register FeatureAnalysis as an analysis pass, so that FeaturePrinterPass can request the results of FeatureAnalysis.

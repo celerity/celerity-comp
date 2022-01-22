@@ -16,8 +16,9 @@ using namespace celerity;
 llvm::AnalysisKey PolFeatAnalysis::Key;
 
 
-ResultPolFeatSet PolFeatAnalysis::run(llvm::Function &fun, llvm::FunctionAnalysisManager &fam){
- /// XXX
+ResultPolFeatSet PolFeatAnalysis::run(llvm::Function &fun, llvm::FunctionAnalysisManager &fam)
+{
+    /// XXX
     
     return ResultPolFeatSet { features->getFeatureCounts(), features->getFeatureValues() };
 }

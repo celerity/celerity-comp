@@ -30,13 +30,13 @@ namespace celerity
         none  // value used for returning invalid invariant
     };
 
-    static unsigned InvariantTypeNum = 21;
+    static unsigned InvariantTypeNum = 24;
     static const char *InvariantTypeName[] = {
         "a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7", "a8", "a9",
         "gs0", "gs1", "gs2",
         "ng0", "ng1", "ng2",
         "ls0", "ls1", "ls2",
-        "nsg", "sgs"
+        "nsg", "sgs", "msgs",
         "none"};
 
     /// Struct for collecting all kernel invariants for a given function (e.g., OpenCL kernel).

@@ -15,27 +15,26 @@ llvm_map_components_to_libnames(llvm_libs support passes core irreader analysis)
 #separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
 #add_definitions(${LLVM_DEFINITIONS_LIST})
 
-# optional: enable support for polynomial cost relations
+# Optional: Enable support for polynomial cost relations
 option(EXTRACTOR_TOOL "Build the external feature extractor tool" ON)
-# optional: support more advanced and accurate feature peresentation
+# Optional: Support more advanced and accurate feature peresentation
 option(POLFEAT "Support for polynomial features" ON)
-# optional: install sample scripts for several 
+# Optional: Install sample scripts for several 
 option(SAMPLE_SCRIPTS "Install sample scripts for C functions, OpenCL and SYCL" ON)
-# optional: Celerity runtime integration 
+# Optional: Celerity runtime integration 
 option(CELERITY_RUNTIME "Install the integration layer for Celerity (requires existing Celerity Runtime installation)" OFF)
 
 # Sources
-set(FEATURE_SRC 
-  src/FeatureSet.cpp           src/FeaturePrinter.cpp      src/FeatureAnalysisPlugin.cpp  
-  src/FeatureAnalysis.cpp      src/Kofler13Analysis.cpp    src/DefaultFeatureAnalysis.cpp  )
+set(FEATURE_SRC  src/FeatureSet.cpp       src/FeatureAnalysisPlugin.cpp  
+                 src/FeatureAnalysis.cpp  src/Kofler13Analysis.cpp   src/DefaultFeatureAnalysis.cpp  )
 
 # Support for polynomial features 
 if(POLFEAT)
   find_package(FLINT REQUIRED)
-  set(EXTRA_INCLUDE        ${FLINT_INCLUDE_DIRS}  )
-  set(FEATURE_SRC          ${FEATURE_SRC}     src/KernelInvariant.cpp  src/PolFeatAnalysis.cpp  src/IMPoly.cpp)
-  set(EXTRA_LIB            ${FLINT_LIBRARIES})
-  # impoly test function 
+  set(EXTRA_INCLUDE    ${FLINT_INCLUDE_DIRS}  )
+  set(FEATURE_SRC      ${FEATURE_SRC}     src/KernelInvariant.cpp  src/PolFeatAnalysis.cpp  src/IMPoly.cpp)
+  set(EXTRA_LIB        ${FLINT_LIBRARIES})
+  # IMPoly test function 
   add_executable(test_impoly ${FEATURE_SRC} src/test_impoly.cpp)
   target_link_libraries(test_impoly ${llvm_libs} ${EXTRA_LIB})
   target_compile_options(test_impoly PUBLIC -Wl,-znodelete)
